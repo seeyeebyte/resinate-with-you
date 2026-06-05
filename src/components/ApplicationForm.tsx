@@ -78,6 +78,7 @@ export function ApplicationForm({
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [statusUrl, setStatusUrl] = useState(initialStatusUrl);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [formLoadTimedOut, setFormLoadTimedOut] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -130,6 +131,18 @@ export function ApplicationForm({
 
     return () => window.clearTimeout(timeout);
   }, [initialSubmitted]);
+
+  useEffect(() => {
+    if (draftLoaded) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setFormLoadTimedOut(true);
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [draftLoaded]);
 
   useEffect(() => {
     if (submitState !== "success") {
@@ -822,16 +835,27 @@ export function ApplicationForm({
         type="submit"
         disabled={!draftLoaded || submitState === "submitting" || photoPreparing.some(Boolean)}
         aria-busy={submitState === "submitting" || photoPreparing.some(Boolean)}
+        aria-describedby={!draftLoaded ? "application-form-loading-note" : undefined}
         className="studio-button studio-button-primary w-full disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         {!draftLoaded
-          ? "Preparing form..."
+          ? "Loading form..."
           : photoPreparing.some(Boolean)
             ? "Preparing photos..."
             : submitState === "submitting"
               ? "Uploading and submitting..."
               : "Submit application"}
       </button>
+      {!draftLoaded ? (
+        <p
+          id="application-form-loading-note"
+          className={`text-xs leading-5 ${formLoadTimedOut ? "font-semibold text-[#a4423b]" : "text-[#626960]"}`}
+        >
+          {formLoadTimedOut
+            ? "The form did not finish loading. Please refresh this page."
+            : "This may take a moment on first load."}
+        </p>
+      ) : null}
 
       <div id="application-form-status" aria-live="polite">
         <StatusMessage submitState={submitState} errorMessage={errorMessage} statusUrl={statusUrl} />
