@@ -99,7 +99,7 @@ export const homepageContent = {
   hero: {
     eyebrow: "Handmade resin directory",
     title: "Find the resin piece that fits.",
-    body: "A soft directory for independent resin artists, personal keepsakes, and custom pieces made outside the usual marketplace rush.",
+    body: "A growing creator space where resin artists are seen, and handmade pieces find their people.",
     primaryCta: { label: "Find a Piece", href: "#finds" },
     secondaryCta: { label: "Explore Artists", href: "/artists" },
     showShowcase: true,

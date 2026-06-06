@@ -111,6 +111,26 @@ For the SQL to paste into Supabase SQL Editor, use:
 docs/supabase-mvp-schema.sql
 ```
 
+## Backup
+
+GitHub backs up the code, but not Supabase data. Before risky changes, run:
+
+```bash
+npm run backup:supabase
+```
+
+Backups are written outside the repo by default:
+
+```text
+/Users/margin/Documents/resinate-with-you-db-backups
+```
+
+For the full GitHub and Supabase backup workflow, use:
+
+```text
+docs/15-github-and-backup.md
+```
+
 ## Key Docs
 
 - `docs/00-project-overview.md`
@@ -126,6 +146,7 @@ docs/supabase-mvp-schema.sql
 - `docs/10-automation-reminder-plan.md`
 - `docs/12-supabase-live-setup-guide.md`
 - `docs/14-production-domain-email-checklist.md`
+- `docs/15-github-and-backup.md`
 - `docs/11-project-index.md`
 
 ## Current Daily Reminder

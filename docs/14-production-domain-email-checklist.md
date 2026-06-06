@@ -1,6 +1,6 @@
-# Production Domain And Email Checklist
+# Production Domain, Email, And Live Artist Checklist
 
-Use this checklist for the live `resinatewithyou.com` launch setup.
+Use this checklist for the live `resinatewithyou.com` launch setup and the first real artist workflow test.
 
 ## Vercel Environment Variables
 
@@ -48,9 +48,34 @@ In Resend:
 2. Use `support@resinatewithyou.com` as `EMAIL_FROM`.
 3. Send one approval email to a test artist before inviting real artists.
 
-## Live Test
+Production email is considered ready only after the approval email arrives in the test artist inbox and the password setup link opens the live site:
+
+```text
+https://resinatewithyou.com/artist/set-password
+```
+
+## Live Artist Workflow Test
 
 1. Submit a test application.
 2. Approve it from `/admin/applications?token=YOUR_ADMIN_REVIEW_TOKEN`.
 3. Confirm the password setup email links to `https://resinatewithyou.com/artist/set-password`.
-4. Set a password, sign in, publish one test product, then hide and restore it from `/admin/products?token=YOUR_ADMIN_REVIEW_TOKEN`.
+4. Set a password from the emailed link.
+5. Sign in from `/artist/login`.
+6. Open `/artist/dashboard` and confirm the approved artist profile appears.
+7. Publish one test product from `/artist/products/new`.
+8. Confirm the product appears in `/products`, on the artist detail page, and on the product detail page.
+9. Hide and restore the product from `/admin/products?token=YOUR_ADMIN_REVIEW_TOKEN`.
+10. If the product should appear on the homepage, add it from `/admin/featured-products?token=YOUR_ADMIN_REVIEW_TOKEN`.
+
+## First Public Content Pass
+
+Before inviting more artists, prepare:
+
+1. 3-5 real products with clear images.
+2. 2-3 polished artist profiles with avatars or strong initials fallback.
+3. Homepage Favorite Finds using real approved products.
+4. One mobile check of the homepage, `/apply`, `/products`, one artist page, and one product page.
+
+## Known Temporary Protection
+
+The admin pages still use `ADMIN_REVIEW_TOKEN` as MVP protection. This is acceptable for the first controlled launch, but the next hardening pass should replace it with a real admin login.

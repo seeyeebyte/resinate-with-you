@@ -1,11 +1,11 @@
 # Project Index
 
-Date updated: 2026-06-05
+Date updated: 2026-06-06
 
 ## Official Project Folder
 
 ```text
-/Users/margin/Documents/滴胶作者网站
+/Users/margin/Documents/resinate-with-you
 ```
 
 Use this folder as the main project entry.
@@ -149,14 +149,15 @@ project-materials/Brand
 
 ## Local Admin Entry
 
-Local admin pages currently use the MVP URL token guard. Add `?token=resinate-admin-2026-private` to the admin URL:
+Local admin pages currently use the MVP URL token guard. Add `?token=YOUR_ADMIN_REVIEW_TOKEN` to the admin URL:
 
 ```text
-http://localhost:3000/admin/applications?token=resinate-admin-2026-private
-http://localhost:3000/admin/featured-products?token=resinate-admin-2026-private
+http://localhost:3000/admin/applications?token=YOUR_ADMIN_REVIEW_TOKEN
+http://localhost:3000/admin/products?token=YOUR_ADMIN_REVIEW_TOKEN
+http://localhost:3000/admin/featured-products?token=YOUR_ADMIN_REVIEW_TOKEN
 ```
 
-This comes from `ADMIN_REVIEW_TOKEN` in `.env.local`. Before launch, replace this temporary URL-token guard with a real admin login.
+This comes from `ADMIN_REVIEW_TOKEN` in `.env.local`. Now that the site is live, treat this as temporary MVP protection and replace it with a real admin login in the next hardening pass.
 
 ## Automation Reminder
 
@@ -177,9 +178,11 @@ Brand has been locked on Day 2.
 
 The reminder cannot live inside the project folder as a chat heartbeat, but this folder stores the source-of-truth plan and status.
 
-## Next Work
+## Launch Follow-Up
 
-Recommended order from here:
+The site is live. The immediate focus is production email, one full artist workflow test, and a small amount of real content quality control before inviting more artists.
+
+Recommended order:
 
 1. Confirm Supabase Auth redirect URLs allow `https://resinatewithyou.com/artist/set-password`, `https://www.resinatewithyou.com/artist/set-password`, and `http://localhost:3000/artist/set-password`.
 2. Configure Resend (`RESEND_API_KEY`, `EMAIL_FROM=support@resinatewithyou.com`) and send one real approval/password setup email.
@@ -188,7 +191,7 @@ Recommended order from here:
 5. Confirm the product appears in `/products`, the artist detail page, and the product detail page.
 6. Test `/admin/products` hide/restore behavior with one real product.
 7. Improve public product/artist display quality with real test content.
-8. Prepare a small pre-launch checklist for mobile, copy, images, and empty states.
+8. Improve the first public impression with 3-5 real products, 2-3 polished artist profiles, and checked mobile screenshots.
 
 ## Local Development
 
