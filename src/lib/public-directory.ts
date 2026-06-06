@@ -214,6 +214,14 @@ function platformKeyFromLabel(label: string | null | undefined): PlatformKey {
 function platformLinksFromArtist(row: SupabaseArtistRow) {
   const links = [];
 
+  if (row.instagram_url) {
+    links.push({
+      platform: "instagram" as const,
+      value: "Instagram",
+      href: row.instagram_url,
+    });
+  }
+
   if (row.contact_link_label && row.shop_url) {
     links.push({
       platform: platformKeyFromLabel(row.contact_link_label),

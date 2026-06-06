@@ -66,11 +66,6 @@ export default async function ArtistDetailPage({ params }: { params: Promise<{ s
                 Visit shop
               </a>
             ) : null}
-            {artist.instagramUrl ? (
-              <a className="studio-button studio-button-secondary" href={artist.instagramUrl} target="_blank" rel="noreferrer">
-                Instagram
-              </a>
-            ) : null}
             {artist.websiteUrl ? (
               <a className="studio-button studio-button-secondary" href={artist.websiteUrl} target="_blank" rel="noreferrer">
                 Website

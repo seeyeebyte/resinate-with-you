@@ -5,14 +5,17 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   isAllowedApplicationPhoto,
   applicationPhotoMaxSize,
-  instagramUrlPattern,
+  instagramUsernamePattern,
   isHttpUrl,
   isInstagramUrl,
   isValidEmail,
+  normalizeInstagramInput,
   maxBioLength,
 } from "@/lib/applications";
 import { CountrySelectField } from "@/components/CountrySelectField";
 import { contactPlatformOptions } from "@/components/PlatformLinks";
+import { countryOptions } from "@/lib/country-options";
+import { regionOptionsByCountryCode } from "@/lib/region-options-by-country";
 import { categories } from "@/lib/site";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
@@ -56,7 +59,8 @@ export function ApplicationForm({
 }: ApplicationFormProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const photoPreviewUrlsRef = useRef(["", "", ""]);
-  const photoInputRefs = useRef<Array<HTMLInputElement | null>>([null, null, null]);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoFilesRef = useRef<Array<File | null>>([null, null, null]);
   const [formFields, setFormFields] = useState(emptyFormFields);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [otherCategory, setOtherCategory] = useState("");
@@ -68,7 +72,6 @@ export function ApplicationForm({
   const [otherContactPlatform, setOtherContactPlatform] = useState("");
   const [photoNames, setPhotoNames] = useState(["", "", ""]);
   const [photoErrors, setPhotoErrors] = useState(["", "", ""]);
-  const [photoFiles, setPhotoFiles] = useState<Array<File | null>>([null, null, null]);
   const [photoPreviews, setPhotoPreviews] = useState(["", "", ""]);
   const [photoPreparing, setPhotoPreparing] = useState([false, false, false]);
   const [authorizationAccepted, setAuthorizationAccepted] = useState(false);
@@ -280,11 +283,39 @@ export function ApplicationForm({
     );
   }
 
-  async function handlePhotoChange(index: number, file: File | null, input: HTMLInputElement) {
+  async function handlePhotoSelection(input: HTMLInputElement) {
+    const selectedFiles = Array.from(input.files || []);
+
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    if (selectedFiles.length > 3) {
+      setPhotoErrors(["Please choose exactly 3 photos.", "", ""]);
+      showPhotoSubmitError("Please choose exactly 3 product photos.", 0);
+      input.value = "";
+      return;
+    }
+
+    clearPhotoPreviews();
+    photoFilesRef.current = [null, null, null];
+    setPhotoNames(["", "", ""]);
+    setPhotoErrors(["", "", ""]);
+    setPhotoPreparing([false, false, false]);
+
+    for (let index = 0; index < 3; index += 1) {
+      const file = selectedFiles[index] || null;
+      await preparePhotoSlot(index, file);
+    }
+
+    input.value = "";
+  }
+
+  async function preparePhotoSlot(index: number, file: File | null) {
     if (!file) {
       setPhotoNames((current) => replaceAt(current, index, ""));
-      setPhotoErrors((current) => replaceAt(current, index, ""));
-      setPhotoFiles((current) => replaceAt(current, index, null));
+      setPhotoErrors((current) => replaceAt(current, index, `Please choose Photo ${index + 1}.`));
+      updatePhotoFile(index, null);
       setPhotoPreparing((current) => replaceAt(current, index, false));
       updatePhotoPreview(index, null);
       return;
@@ -295,7 +326,6 @@ export function ApplicationForm({
     if (isHeicPhoto(file)) {
       setPhotoNames((current) => replaceAt(current, index, "Preparing iPhone photo..."));
       setPhotoErrors((current) => replaceAt(current, index, ""));
-      setPhotoFiles((current) => replaceAt(current, index, null));
       setPhotoPreparing((current) => replaceAt(current, index, true));
       updatePhotoPreview(index, null);
 
@@ -310,10 +340,9 @@ export function ApplicationForm({
             "This iPhone photo could not be converted. Please choose a screenshot of it, or export it as JPEG.",
           ),
         );
-        setPhotoFiles((current) => replaceAt(current, index, null));
+        updatePhotoFile(index, null);
         setPhotoPreparing((current) => replaceAt(current, index, false));
         updatePhotoPreview(index, null);
-        input.value = "";
         return;
       }
     } else {
@@ -329,10 +358,9 @@ export function ApplicationForm({
           "This photo format is not supported. Please choose a JPG, PNG, or WebP image. For an iPhone HEIC photo, use a screenshot or export it as JPEG.",
         ),
       );
-      setPhotoFiles((current) => replaceAt(current, index, null));
+      updatePhotoFile(index, null);
       setPhotoPreparing((current) => replaceAt(current, index, false));
       updatePhotoPreview(index, null);
-      input.value = "";
       return;
     }
 
@@ -341,18 +369,21 @@ export function ApplicationForm({
       setPhotoErrors((current) =>
         replaceAt(current, index, "This photo is larger than 5 MB. Please choose a smaller image."),
       );
-      setPhotoFiles((current) => replaceAt(current, index, null));
+      updatePhotoFile(index, null);
       setPhotoPreparing((current) => replaceAt(current, index, false));
       updatePhotoPreview(index, null);
-      input.value = "";
       return;
     }
 
     setPhotoNames((current) => replaceAt(current, index, preparedFile.name || `Photo ${index + 1} selected`));
     setPhotoErrors((current) => replaceAt(current, index, ""));
-    setPhotoFiles((current) => replaceAt(current, index, preparedFile));
+    updatePhotoFile(index, preparedFile);
     setPhotoPreparing((current) => replaceAt(current, index, false));
     updatePhotoPreview(index, preparedFile);
+  }
+
+  function updatePhotoFile(index: number, file: File | null) {
+    photoFilesRef.current = replaceAt(photoFilesRef.current, index, file);
   }
 
   function updatePhotoPreview(index: number, file: File | null) {
@@ -370,19 +401,7 @@ export function ApplicationForm({
   }
 
   function getSelectedPhotoSlots() {
-    return photoInputRefs.current.map((input, index) => {
-      const nativeFile = input?.files?.[0] ?? null;
-
-      if (!nativeFile) {
-        return null;
-      }
-
-      if (isHeicPhoto(nativeFile)) {
-        return photoFiles[index];
-      }
-
-      return nativeFile;
-    });
+    return photoFilesRef.current;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -401,7 +420,7 @@ export function ApplicationForm({
     const brandName = formFields.brandName.trim();
     const contactName = formFields.contactName.trim();
     const normalizedEmail = email.trim().toLowerCase();
-    const instagramUrl = formFields.instagramUrl.trim();
+    const instagramUrl = normalizeInstagramInput(formFields.instagramUrl);
     const websiteUrl = formFields.websiteUrl.trim();
 
     if (!brandName) {
@@ -425,8 +444,8 @@ export function ApplicationForm({
       return;
     }
 
-    if (instagramUrl && !isInstagramUrl(instagramUrl)) {
-      showSubmitError("Instagram URL must be an instagram.com profile or post link.");
+    if (formFields.instagramUrl.trim() && (!instagramUrl || !isInstagramUrl(instagramUrl))) {
+      showSubmitError("Instagram username must use letters, numbers, periods, or underscores only.");
       return;
     }
 
@@ -506,7 +525,7 @@ export function ApplicationForm({
     formData.set("brand_name", brandName);
     formData.set("contact_name", contactName);
     formData.set("email", normalizedEmail);
-    formData.set("instagram_url", instagramUrl);
+    formData.set("instagram_url", instagramUrl || "");
     formData.set("website_url", websiteUrl);
     formData.set("shop_url", formFields.shopUrl.trim());
     formData.set("price_range", formFields.priceRange.trim());
@@ -579,7 +598,10 @@ export function ApplicationForm({
     setOtherContactPlatform("");
     setPhotoNames(["", "", ""]);
     setPhotoErrors(["", "", ""]);
-    setPhotoFiles([null, null, null]);
+    photoFilesRef.current = [null, null, null];
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
     setPhotoPreparing([false, false, false]);
     clearPhotoPreviews();
     setAuthorizationAccepted(false);
@@ -592,6 +614,8 @@ export function ApplicationForm({
     }
 
   }
+
+  const provinceOptions = regionOptionsForCountry(country);
 
   return (
     <>
@@ -635,17 +659,27 @@ export function ApplicationForm({
           value={provinceOrState}
           onChange={setProvinceOrState}
           placeholder="Province, state, prefecture, or region"
+          listId={provinceOptions.length ? "application-province-options" : undefined}
           helper="City-level detail is not needed. Leave blank if it does not apply."
         />
+        {provinceOptions.length ? (
+          <datalist id="application-province-options">
+            {provinceOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </datalist>
+        ) : null}
         <Field
-          label="Instagram URL"
+          label="Instagram username"
           name="instagram_url"
-          type="url"
+          type="text"
           value={formFields.instagramUrl}
           onChange={(value) => setFormFields((current) => ({ ...current, instagramUrl: value }))}
-          pattern={instagramUrlPattern}
-          placeholder="https://www.instagram.com/yourname"
-          helper="Must be an instagram.com profile or post URL."
+          pattern={instagramUsernamePattern}
+          placeholder="yourname"
+          helper="Enter your Instagram username. We will link it to your profile."
         />
         <Field
           label="Website URL"
@@ -724,8 +758,26 @@ export function ApplicationForm({
       <fieldset>
         <legend className="text-sm font-semibold text-[#2d3842]">Product photos *</legend>
         <p className="mt-2 text-xs leading-5 text-[#626960]">
-          Choose 3 photos that best represent your work. JPG, PNG, or WebP, max 5 MB each.
+          Choose exactly 3 photos that best represent your work. JPG, PNG, or WebP, max 5 MB each.
         </p>
+        <label
+          htmlFor="application-photos"
+          className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[10px] border border-dashed border-[#bfc8be] bg-[#f5fbff] px-4 py-6 text-center transition hover:border-[#8cab91] hover:bg-[#f1fbef]"
+        >
+          <span className="text-sm font-semibold text-[#2d3842]">Choose 3 photos</span>
+          <span className="mt-1 text-xs leading-5 text-[#626960]">You can select all 3 from your album at once.</span>
+        </label>
+        <input
+          id="application-photos"
+          ref={photoInputRef}
+          name="sample_images"
+          type="file"
+          accept="image/*,.jpg,.jpeg,.png,.webp"
+          multiple
+          onChange={(event) => void handlePhotoSelection(event.target)}
+          className="sr-only"
+          aria-label="Choose exactly 3 product photos"
+        />
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {photoNames.map((fileName, index) => (
             <div
@@ -739,9 +791,9 @@ export function ApplicationForm({
                     : "border-[#bfc8be] bg-[#f5fbff]"
               }`}
             >
-              <label htmlFor={`application-photo-${index}`} className="block text-sm font-semibold text-[#2d3842]">
+              <p className="text-sm font-semibold text-[#2d3842]">
                 Photo {index + 1}
-              </label>
+              </p>
               {photoPreviews[index] ? (
                 <NextImage
                   src={photoPreviews[index]}
@@ -752,18 +804,6 @@ export function ApplicationForm({
                   className="mt-3 aspect-square w-full rounded-[8px] border border-[#d9ddd2] bg-white object-contain"
                 />
               ) : null}
-              <input
-                id={`application-photo-${index}`}
-                name="sample_images"
-                type="file"
-                accept="image/*,.jpg,.jpeg,.png,.webp"
-                ref={(element) => {
-                  photoInputRefs.current[index] = element;
-                }}
-                onChange={(event) => void handlePhotoChange(index, event.target.files?.[0] ?? null, event.target)}
-                className="mt-3 block w-full cursor-pointer text-xs text-[#626960] file:mr-3 file:cursor-pointer file:rounded-full file:border file:border-[#cfd6cb] file:bg-white file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#2d3842]"
-                aria-label={`Photo ${index + 1}`}
-              />
               <p className={`mt-3 break-all text-xs leading-5 ${photoErrors[index] ? "text-[#a4423b]" : "text-[#626960]"}`}>
                 {photoErrors[index] || (fileName ? `Selected: ${fileName}` : "No photo selected yet.")}
               </p>
@@ -972,6 +1012,15 @@ function firstPhotoPreparingIndex(preparing: boolean[]) {
   return index >= 0 ? index : 0;
 }
 
+function regionOptionsForCountry(country: string) {
+  const normalizedCountry = country.trim().toLowerCase();
+  const countryOption = countryOptions.find(
+    (option) => option.value.toLowerCase() === normalizedCountry || option.label.toLowerCase() === normalizedCountry,
+  );
+
+  return countryOption?.code ? regionOptionsByCountryCode[countryOption.code] || [] : [];
+}
+
 function saveApplicationDraft(draft: ApplicationDraft) {
   const hasDraft =
     Object.values(draft.formFields).some((value) =>
@@ -1046,6 +1095,7 @@ function ControlledField({
   value,
   onChange,
   placeholder,
+  listId,
   helper,
 }: {
   label: string;
@@ -1053,6 +1103,7 @@ function ControlledField({
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  listId?: string;
   helper?: string;
 }) {
   return (
@@ -1060,6 +1111,7 @@ function ControlledField({
       <span className="text-sm font-semibold text-[#2d3842]">{label}</span>
       <input
         name={name}
+        list={listId}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}

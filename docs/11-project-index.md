@@ -58,14 +58,14 @@ After each meaningful completed change, update this project index or the related
 | --- | --- | --- |
 | Static public site | Done | Homepage, Favorite Finds, Product Directory, Artist Directory, artist detail, and product detail pages exist. |
 | Public directory database reads | Live artist display tested | Public artists/products read approved Supabase data, with mock fallback while live data is empty. An approved artist has appeared publicly after review. |
-| Artist application form | Streamlined and mobile-safe | Form submits through `/api/applications`, supports separate contact/link platform and actual account/link, stable country dropdown, typed province/state, required contact name, Instagram URL validation, stricter email format validation, three separate required review-photo inputs, USD price guidance, English bio guidance, and a 500-character short bio. Text fields auto-save locally. Success now appears in a centered confirmation dialog, upload and validation errors stay with the form, and the first-load button state now explains that the form is loading instead of looking broken. |
+| Artist application form | Streamlined and mobile-safe | Form submits through `/api/applications`, supports separate contact/link platform and actual account/link, stable country dropdown, typed province/state with native suggestions, required contact name, Instagram username parsing, stricter email format validation, one required 3-photo upload entrance with previews, USD price guidance, English bio guidance, and a 500-character short bio. Text fields auto-save locally. Success now appears in a centered confirmation dialog, upload and validation errors stay with the form, and the first-load button state now explains that the form is loading instead of looking broken. |
 | Duplicate application control | Live rule confirmed | The form checks email after input, blocks duplicate emails before image upload, and Supabase now has the unique lower-case email index confirmed. |
 | Application review flow | Live approve tested | `/admin/applications` can review applications, save notes, approve, request more info, or reject. A submitted test application has been approved live. |
 | Artist status lookup | Live approved-status tested | `/artist/application-status` lets applicants check status by email. The approved test application now shows the updated status. |
 | Favorite Finds admin | Clarified | `/admin/featured-products` controls which approved products appear on the homepage and their order. Admins choose products from thumbnail cards, and public homepage cards use the product's own first image so Featured Finds, product directory, and product detail start from the same photo. |
 | Supabase database setup | MVP flow tested | Tables, buckets, env values, submission, image upload, duplicate-email index, duplicate-email blocking, 15-product limit, live approval, public artist display, approved status lookup, product image bucket, and artist avatar bucket are documented. |
 | Email notifications | Code done, not live-critical | Admin and applicant email helpers are wired for Resend. Needs `RESEND_API_KEY`, `EMAIL_FROM`, and `ADMIN_NOTIFICATION_EMAIL` before live email sending. |
-| Artist login/dashboard | Professional workspace sections added | Header links to `/artist/login`; Supabase email/password sign-in routes artists to `/artist/dashboard`, now split into Profile, Products, and Account sections. Artists can edit avatar, brand/contact names, independent public contact email, searchable country/province, Instagram, website, optional contact/shop platform and account/link, categories, products, and account session actions. |
+| Artist login/dashboard | Professional workspace sections added | Header links to `/artist/login`; Supabase email/password sign-in routes artists to `/artist/dashboard`, now split into Profile, Products, and Account sections. Artists can edit avatar, brand/contact names, independent public contact email, country/province, Instagram username, website, optional contact/shop platform and account/link, categories, products, and account session actions. |
 | Product publishing | Manageable by artist | Approved artists can publish products directly from `/artist/products/new`. Product upload is limited to 1-5 images, 2 MB each. Product detail pages now support multiple images with a smaller gallery layout. Dashboard now shows a compact product list with Edit, Hide/Show, and Delete actions; edit mode supports product text fields and image add/delete. |
 
 Latest validation:
@@ -73,7 +73,7 @@ Latest validation:
 ```text
 npm run lint: passed
 npx tsc --noEmit: passed
-npm run build: blocked locally because Google Fonts could not be reached; no code compilation error was reported before the network failure
+npm run build: passed
 ```
 
 Latest UI changes:
@@ -83,7 +83,8 @@ Desktop homepage uses the interactive 3D puzzle model again; phone and tablet la
 The current mobile fallback image is `public/assets/resin-collection.png` at 1536 x 1024. A 1600 x 1200 replacement is recommended for the current 4:3 mobile crop.
 Desktop 3D loading now uses the stable `/models/lovepuzzle.glb` asset path and only reports an error after a real loader failure; the previous fixed 15-second false-failure timer was removed.
 The artist application intro is shorter, the large review-rules card is replaced by one concise line, and mobile spacing reaches the form sooner.
-Application review photos now use three separate required upload slots with visible native file controls, selected-file confirmation, image previews, per-photo format/size errors, and local HEIC/HEIF-to-JPEG preparation where the browser supports it. This avoids silent iPhone photo-picker failures and keeps missing photos from clearing completed text fields.
+Application review photos now use one mobile-friendly upload entrance that accepts exactly three photos at once, then displays three preview slots with per-photo format/size errors and local HEIC/HEIF-to-JPEG preparation where the browser supports it. This reduces repeated photo-library openings on phones and keeps missing photos from clearing completed text fields.
+Application and artist profile Instagram fields now accept usernames such as `marginmold` or `@marginmold`, while pasted Instagram links are still normalized before saving.
 Successful React and native application submissions now open the same centered `Application received` confirmation dialog.
 Product detail page now uses a smaller multi-image gallery with thumbnails.
 Product uploads now allow 1-5 images, max 2 MB each.
@@ -95,7 +96,7 @@ Product directory uses `Style` instead of `Tag`, and style filters now read actu
 Artist dashboard now lets artists edit public profile details and manage existing products.
 Artist dashboard has been reorganized into Profile, Products, and Account sections.
 Artist product overview now defaults to compact rows, with product editing and image management inside an expandable edit mode. Product image deletion is now a direct per-image button with a confirmation window.
-Artist profile editing now follows the application form rules for searchable locations, Instagram URL validation, product category choices, and separate contact platform/account fields.
+Artist profile editing now follows the application form rules for locations, Instagram username parsing, product category choices, and separate contact platform/account fields.
 Featured Finds now uses the product's first product image for homepage display and ignores old homepage override images, matching product directory and product detail defaults.
 Featured Finds admin no longer allows separate homepage image uploads; admins choose products from thumbnail cards only.
 Artist puzzle wall labels and popovers now use the uploaded artist avatar when available, with initials only as fallback.

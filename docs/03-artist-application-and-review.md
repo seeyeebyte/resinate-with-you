@@ -31,7 +31,7 @@ Province / state
 ### Links
 
 ```text
-Instagram URL
+Instagram username
 Website URL
 Contact or Link Name
 Actual Account or Link
@@ -89,7 +89,7 @@ Other
 ### Sample Work
 
 ```text
-Upload 3 different product photos
+Choose exactly 3 product photos at once
 Choose 3 images that best represent the artist's product style for review
 Add 1-2 product links if available
 ```

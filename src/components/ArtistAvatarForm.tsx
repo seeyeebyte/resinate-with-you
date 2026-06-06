@@ -4,7 +4,15 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CountrySelectField } from "@/components/CountrySelectField";
 import { contactPlatformOptions } from "@/components/PlatformLinks";
-import { instagramUrlPattern, isValidEmail } from "@/lib/applications";
+import {
+  instagramUsernameFromInput,
+  instagramUsernamePattern,
+  isInstagramUrl,
+  isValidEmail,
+  normalizeInstagramInput,
+} from "@/lib/applications";
+import { countryOptions } from "@/lib/country-options";
+import { regionOptionsByCountryCode } from "@/lib/region-options-by-country";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { categories as productCategories } from "@/lib/site";
 
@@ -120,6 +128,13 @@ export function ArtistAvatarForm() {
       return;
     }
 
+    const instagramUrl = normalizeInstagramInput(profile.instagramUrl);
+
+    if (profile.instagramUrl.trim() && (!instagramUrl || !isInstagramUrl(instagramUrl))) {
+      setError("Instagram username must use letters, numbers, periods, or underscores only.");
+      return;
+    }
+
     const token = await getAccessToken();
 
     if (!token) {
@@ -134,7 +149,7 @@ export function ArtistAvatarForm() {
     formData.append("country", profile.country);
     formData.append("city", profile.city);
     formData.append("bio", profile.bio);
-    formData.append("instagram_url", profile.instagramUrl);
+    formData.append("instagram_url", instagramUrl || "");
     formData.append("website_url", profile.websiteUrl);
     formData.append("contact_link_label", contactLinkLabel);
     formData.append("shop_url", profile.shopUrl);
@@ -208,6 +223,8 @@ export function ArtistAvatarForm() {
         : [...current.categories, category],
     }));
   }
+
+  const provinceOptions = regionOptionsForCountry(profile.country);
 
   return (
     <form onSubmit={saveProfile} noValidate className="mt-6 rounded-[8px] border border-[#d9ddd2] bg-white/70 p-4">
@@ -303,21 +320,31 @@ export function ArtistAvatarForm() {
           <input
             value={profile.city}
             onChange={(event) => setProfile((current) => ({ ...current, city: event.target.value }))}
+            list={provinceOptions.length ? "artist-profile-province-options" : undefined}
             className="field-control mt-2 w-full px-3"
             placeholder="Province, state, prefecture, or region"
           />
+          {provinceOptions.length ? (
+            <datalist id="artist-profile-province-options">
+              {provinceOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </datalist>
+          ) : null}
           <p className="mt-2 text-xs leading-5 text-[#626960]">City-level detail is not needed. Leave blank if it does not apply.</p>
         </Label>
-        <Label title="Instagram URL">
+        <Label title="Instagram username">
           <input
             value={profile.instagramUrl}
             onChange={(event) => setProfile((current) => ({ ...current, instagramUrl: event.target.value }))}
-            type="url"
-            pattern={instagramUrlPattern}
+            type="text"
+            pattern={instagramUsernamePattern}
             className="field-control mt-2 w-full px-3"
-            placeholder="https://www.instagram.com/yourname"
+            placeholder="yourname"
           />
-          <p className="mt-2 text-xs leading-5 text-[#626960]">Must be an instagram.com profile or post URL.</p>
+          <p className="mt-2 text-xs leading-5 text-[#626960]">Enter your Instagram username. We will link it to your profile.</p>
         </Label>
         <Label title="Website URL">
           <input
@@ -422,7 +449,7 @@ function profileFromArtist(artist: ArtistProfile | null | undefined) {
     country: artist?.country || "",
     city: artist?.city || "",
     bio: artist?.bio || "",
-    instagramUrl: artist?.instagram_url || "",
+    instagramUrl: instagramUsernameFromInput(artist?.instagram_url || ""),
     websiteUrl: artist?.website_url || "",
     contactPlatform: contactPlatform.value,
     otherContactPlatform: contactPlatform.otherLabel,
@@ -431,6 +458,15 @@ function profileFromArtist(artist: ArtistProfile | null | undefined) {
     acceptsCustom: Boolean(artist?.accepts_custom),
     shipsInternational: Boolean(artist?.ships_international),
   };
+}
+
+function regionOptionsForCountry(country: string) {
+  const normalizedCountry = country.trim().toLowerCase();
+  const countryOption = countryOptions.find(
+    (option) => option.value.toLowerCase() === normalizedCountry || option.label.toLowerCase() === normalizedCountry,
+  );
+
+  return countryOption?.code ? regionOptionsByCountryCode[countryOption.code] || [] : [];
 }
 
 function contactPlatformFromLabel(label: string) {

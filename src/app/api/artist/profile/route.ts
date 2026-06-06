@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findApprovedArtistForUser } from "@/lib/artist-session";
-import { isHttpUrl, isInstagramUrl, isValidEmail } from "@/lib/applications";
+import { isHttpUrl, isInstagramUrl, isValidEmail, normalizeInstagramInput } from "@/lib/applications";
 import { artistAvatarBucket, getSupabaseServiceClient } from "@/lib/supabase";
 
 const maxAvatarSize = 2 * 1024 * 1024;
@@ -43,7 +43,7 @@ export async function PATCH(request: Request) {
   const country = normalizeOptionalString(formData.get("country"));
   const city = normalizeOptionalString(formData.get("city"));
   const bio = normalizeOptionalString(formData.get("bio"));
-  const instagramUrl = normalizeOptionalString(formData.get("instagram_url"));
+  const instagramUrl = normalizeInstagramInput(formData.get("instagram_url"));
   const websiteUrl = normalizeOptionalString(formData.get("website_url"));
   const contactLinkLabel = normalizeOptionalString(formData.get("contact_link_label"));
   const shopUrl = normalizeOptionalString(formData.get("shop_url"));
@@ -60,7 +60,7 @@ export async function PATCH(request: Request) {
   }
 
   if (instagramUrl && !isInstagramUrl(instagramUrl)) {
-    return NextResponse.json({ error: "Instagram URL must be a valid instagram.com link." }, { status: 400 });
+    return NextResponse.json({ error: "Instagram username must be valid." }, { status: 400 });
   }
 
   if (websiteUrl && !isHttpUrl(websiteUrl)) {

@@ -1,4 +1,14 @@
-export type PlatformKey = "wechat" | "xiaohongshu" | "line" | "shopee" | "naver" | "kakaotalk" | "etsy" | "email" | "other";
+export type PlatformKey =
+  | "instagram"
+  | "wechat"
+  | "xiaohongshu"
+  | "line"
+  | "shopee"
+  | "naver"
+  | "kakaotalk"
+  | "etsy"
+  | "email"
+  | "other";
 
 export type PlatformLink = {
   platform: PlatformKey;
@@ -7,6 +17,7 @@ export type PlatformLink = {
 };
 
 const platformLabels: Record<PlatformKey, string> = {
+  instagram: "Instagram",
   wechat: "WeChat",
   xiaohongshu: "Xiaohongshu",
   line: "LINE",
@@ -71,6 +82,16 @@ function PlatformIcon({ platform, compact }: { platform: PlatformKey; compact: b
         <path d="M10.4 6.2c-4 0-7.2 2.4-7.2 5.4 0 1.7 1 3.2 2.6 4.2l-.5 2 2.4-1.1c.8.2 1.7.3 2.7.3 4 0 7.2-2.4 7.2-5.4s-3.2-5.4-7.2-5.4Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
         <path d="M14.2 11.2c3.6.1 6.4 2.2 6.4 4.9 0 1.4-.8 2.7-2.1 3.6l.4 1.6-2-1c-.8.2-1.6.3-2.5.3-2.4 0-4.5-1-5.6-2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
         <path d="M7.9 10h.1M12.3 10h.1" stroke="currentColor" strokeLinecap="round" strokeWidth="2.4" />
+      </svg>
+    );
+  }
+
+  if (platform === "instagram") {
+    return (
+      <svg aria-hidden="true" className={size} fill="none" viewBox="0 0 24 24">
+        <rect height="15" rx="4" stroke="currentColor" strokeWidth="1.7" width="15" x="4.5" y="4.5" />
+        <circle cx="12" cy="12" r="3.1" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M16.3 7.7h.1" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
       </svg>
     );
   }

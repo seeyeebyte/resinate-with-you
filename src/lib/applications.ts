@@ -4,7 +4,7 @@ import type { ApplicationInsert, ApplicationRecord, ApplicationStatus } from "@/
 export const reviewStatuses: ApplicationStatus[] = ["approved", "needs_info", "rejected"];
 export const requiredSampleImageCount = 3;
 export const maxBioLength = 500;
-export const instagramUrlPattern = "^https?:\\/\\/(www\\.)?instagram\\.com\\/.+";
+export const instagramUsernamePattern = "^@?[A-Za-z0-9._]{1,30}$";
 export const applicationPhotoMaxSize = 5 * 1024 * 1024;
 export const allowedApplicationPhotoTypes = ["image/jpeg", "image/png", "image/webp"];
 const allowedApplicationPhotoExtensions = [".jpg", ".jpeg", ".png", ".webp"];
@@ -85,7 +85,7 @@ export function normalizeApplicationPayload(input: ApplicationPayload): Applicat
     email: normalizeRequiredString(input.email).toLowerCase(),
     country: normalizeOptionalString(input.country),
     city: normalizeOptionalString(input.city),
-    instagram_url: normalizeOptionalString(input.instagram_url),
+    instagram_url: normalizeInstagramInput(input.instagram_url),
     website_url: normalizeOptionalString(input.website_url),
     contact_link_label: normalizeOptionalString(input.contact_link_label),
     shop_url: normalizeOptionalString(input.shop_url),
@@ -114,7 +114,7 @@ export function validateApplication(application: ApplicationInsert) {
   }
 
   if (application.instagram_url && !isInstagramUrl(application.instagram_url)) {
-    return "Instagram URL must be a valid instagram.com link.";
+    return "Instagram username must be valid.";
   }
 
   if (application.website_url && !isHttpUrl(application.website_url)) {
@@ -167,6 +167,49 @@ export function isInstagramUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+export function normalizeInstagramInput(value: unknown) {
+  const text = normalizeOptionalString(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const username = instagramUsernameFromInput(text);
+  return username ? `https://www.instagram.com/${username}` : text;
+}
+
+export function instagramUsernameFromInput(value: unknown) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return "";
+  }
+
+  const maybeUrl = text.startsWith("http://") || text.startsWith("https://") ? instagramUsernameFromUrl(text) : "";
+  const username = maybeUrl || text.replace(/^@+/, "").trim();
+
+  return isInstagramUsername(username) ? username : "";
+}
+
+export function instagramUsernameFromUrl(value: string) {
+  try {
+    const url = new URL(value);
+
+    if (!["instagram.com", "www.instagram.com"].includes(url.hostname.toLowerCase())) {
+      return "";
+    }
+
+    const username = url.pathname.split("/").filter(Boolean)[0] || "";
+    return isInstagramUsername(username) ? username : "";
+  } catch {
+    return "";
+  }
+}
+
+export function isInstagramUsername(value: string) {
+  return /^[A-Za-z0-9._]{1,30}$/.test(value.trim());
 }
 
 export function isValidEmail(value: string) {
