@@ -191,3 +191,23 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+For phone testing on the same Wi-Fi, use the Mac's current local IP instead of `localhost`.
+
+Current local test address:
+
+```text
+http://192.168.1.8:3000
+```
+
+Check the current Wi-Fi IP on macOS:
+
+```bash
+ipconfig getifaddr en0
+```
+
+If that prints nothing, check which network interface is active:
+
+```bash
+route get default | sed -n 's/.*interface: //p'
+```
