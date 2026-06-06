@@ -1,0 +1,11 @@
+node_modules
+.next
+.next-build
+out
+coverage
+.DS_Store
+.env*
+*.tsbuildinfo
+next-env.d.ts
+obsidian-wiki-sandbox
+project-materials
