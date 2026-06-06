@@ -9,8 +9,8 @@ const nextConfig: NextConfig = {
     "192.168.1.8",
     "192.168.0.10",
   ],
-  // Keep production builds from overwriting an active development server's client chunks.
-  distDir: process.env.NODE_ENV === "production" ? ".next-build" : ".next",
+  // Keep local production builds from overwriting an active development server's client chunks.
+  distDir: process.env.VERCEL ? ".next" : process.env.NODE_ENV === "production" ? ".next-build" : ".next",
   outputFileTracingRoot: process.cwd(),
 };
 
