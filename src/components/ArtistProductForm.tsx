@@ -141,11 +141,6 @@ export function ArtistProductForm() {
           <p className="text-sm font-semibold text-[#2d3842]">Style tags</p>
           <ProductStyleTagPicker />
         </div>
-
-        <Label title="Image alt text">
-          <input name="alt_text" maxLength={160} className="field-control mt-2 w-full px-3" placeholder="Short description of the product photos" />
-          <p className="mt-2 text-sm leading-6 text-[#626960]">Optional, but helpful for accessibility and search.</p>
-        </Label>
       </div>
 
       <Label title="Product photos *">

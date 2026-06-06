@@ -1,5 +1,6 @@
 export const siteConfig = {
   name: "Resinate With You",
+  url: "https://resinatewithyou.com",
   tagline: "Discover resin artists. Create pieces together.",
   description:
     "Discover handmade resin artists, find pieces that feel personal, and co-create custom work through each artist's own shop or contact link.",

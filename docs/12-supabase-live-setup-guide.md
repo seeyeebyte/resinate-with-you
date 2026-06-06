@@ -12,6 +12,7 @@ Supabase will store:
 - homepage Favorite Finds
 - simple click records
 - artist email/password login
+- artist password setup and reset emails
 
 The website already has fallback mock data, so it will not break while Supabase is empty.
 
@@ -47,7 +48,9 @@ This SQL creates:
 - `featured_products`
 - `clicks`
 - public Storage buckets for uploaded images
-- database safeguards for 15 products per artist and 8 images per product
+- database safeguards for 15 products per artist and 5 images per product
+
+If the project already has tables, the same SQL also adds newer profile fields such as `artist_type` and `studio_address` without deleting existing rows.
 
 ## Step 3: Confirm Storage Buckets
 
@@ -61,7 +64,7 @@ product-images
 artist-avatars
 ```
 
-3. Confirm all three are public.
+3. Confirm all four are public.
 
 If they do not appear, create them manually in Storage with the same names and set them as public.
 
@@ -88,6 +91,7 @@ Use this shape:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=PASTE_PROJECT_URL_HERE
 NEXT_PUBLIC_SUPABASE_ANON_KEY=PASTE_ANON_PUBLIC_KEY_HERE
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=PASTE_SERVICE_ROLE_KEY_HERE
 ADMIN_REVIEW_TOKEN=choose-a-private-admin-token
 SUPABASE_APPLICATION_PHOTOS_BUCKET=application-photos
@@ -100,10 +104,50 @@ EMAIL_FROM=
 ```
 
 For `ADMIN_REVIEW_TOKEN`, choose something private, for example a long phrase without spaces.
+For local testing, keep `NEXT_PUBLIC_SITE_URL=http://localhost:3000`.
+
+For Vercel production, set:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://resinatewithyou.com
+EMAIL_FROM=support@resinatewithyou.com
+```
 
 After saving `.env.local`, restart the local website preview.
 
-## Step 6: Test Application Submission
+## Step 6: Allow Password Redirect URLs
+
+Password setup and forgot-password emails send artists to:
+
+```text
+/artist/set-password
+```
+
+In Supabase:
+
+1. Open `Authentication`.
+2. Open `URL Configuration`.
+3. Set the Site URL to:
+
+```text
+https://resinatewithyou.com
+```
+
+4. Add these redirect URLs:
+
+```text
+https://resinatewithyou.com/artist/set-password
+https://www.resinatewithyou.com/artist/set-password
+http://localhost:3000/artist/set-password
+```
+
+5. If Vercel currently shows another production URL, keep it only as a temporary testing redirect. The preferred public password links should use:
+
+```text
+https://resinatewithyou.com/artist/set-password
+```
+
+## Step 7: Test Application Submission
 
 1. Open `/apply`.
 2. Submit one test artist application.
@@ -111,10 +155,11 @@ After saving `.env.local`, restart the local website preview.
 4. Go to Supabase `Table Editor`.
 5. Open `applications`.
 6. Confirm the new application appears with `status = submitted`.
+7. If you selected `Offline studio`, confirm `artist_type` and optional `studio_address` were saved.
 
 Current status: this has been tested once with a live submission and image upload. Repeat this step only when checking a new form change.
 
-## Step 7: Test Admin Review
+## Step 8: Test Admin Review
 
 Open:
 
@@ -128,14 +173,27 @@ Then check Supabase:
 
 - `applications.status` should become `approved`
 - `artists` should have a new artist record
+- `profiles` should have a matching artist profile
+- the `artists.user_id` should be connected to the Supabase Auth user
 
-Email may be skipped until Resend is configured. That is okay for this stage.
+Approval now creates or reuses a Supabase Auth user and sends a password setup email. Email may be skipped until Resend is configured. That is okay for database testing, but a real artist cannot self-set a password until email is configured.
 
 Current status: a test application has been approved, the matching artist appeared publicly, and the status lookup shows `approved`.
 
 Duplicate email behavior has also been tested: the form blocks repeat submissions for the same email.
 
-## Step 8: Test Favorite Finds Manager
+## Step 9: Test Artist Password Email
+
+After Resend is configured:
+
+1. Approve one test application from `/admin/applications?token=YOUR_ADMIN_REVIEW_TOKEN`.
+2. Open the password setup email.
+3. Click the setup link.
+4. Set a password at `/artist/set-password`.
+5. Sign in at `/artist/login`.
+6. Try `Forgot password?` from the login page and confirm a reset email arrives.
+
+## Step 10: Test Favorite Finds Manager
 
 The Favorite Finds manager needs at least one approved product.
 
@@ -159,11 +217,10 @@ is_featured: false
 
 4. Open `/admin/featured-products?token=YOUR_ADMIN_REVIEW_TOKEN`.
 5. Choose the approved product.
-6. Upload a homepage display photo if you want.
-7. Save.
-8. Refresh the homepage and check `Favorite Finds This Week`.
+6. Save.
+7. Refresh the homepage and check `Favorite Finds This Week`.
 
-## Step 9: Approved Artist Product Publishing
+## Step 11: Approved Artist Product Publishing
 
 Approved artists can publish products directly. The MVP does not need a separate admin product review backend.
 
@@ -181,7 +238,7 @@ The product publishing flow should support:
 
 Submitted products should save as public approved products for that approved artist.
 
-Current status: product submission/display has been tested once. Continue by polishing product publishing and image handling rather than building a product review queue.
+Current status: product submission/display has been tested once. Continue by polishing product publishing and image handling.
 
 Artist upload URL:
 
@@ -190,6 +247,24 @@ Artist upload URL:
 ```
 
 This page requires the artist to be signed in.
+
+## Step 12: Test Admin Product Management
+
+Open:
+
+```text
+/admin/products?token=YOUR_ADMIN_REVIEW_TOKEN
+```
+
+Use this page to:
+
+- see all artist products
+- filter live, hidden, or needs-changes products
+- hide an unsuitable product
+- restore a hidden product
+- save moderation notes
+
+If a product is hidden, the site also turns off its active homepage Featured Finds placement.
 
 ## Troubleshooting
 
@@ -212,6 +287,16 @@ Check:
 ### Application submits but email does not send
 
 This is expected until Resend is configured. Database actions still work.
+
+### Password setup link does not open
+
+Check Supabase `Authentication -> URL Configuration`. These redirect URLs should exist:
+
+```text
+https://resinatewithyou.com/artist/set-password
+https://www.resinatewithyou.com/artist/set-password
+http://localhost:3000/artist/set-password
+```
 
 ### Homepage still shows mock data
 

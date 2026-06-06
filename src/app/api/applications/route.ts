@@ -37,6 +37,8 @@ export async function POST(request: Request) {
       email: String(formData.get("email") || ""),
       country: optionalFormValue(formData, "country"),
       city: optionalFormValue(formData, "city"),
+      artist_type: optionalFormValue(formData, "artist_type"),
+      studio_address: optionalFormValue(formData, "studio_address"),
       instagram_url: optionalFormValue(formData, "instagram_url"),
       website_url: optionalFormValue(formData, "website_url"),
       contact_link_label:

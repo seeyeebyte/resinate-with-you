@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findApprovedArtistForUser } from "@/lib/artist-session";
-import { isHttpUrl, isInstagramUrl, isValidEmail, normalizeInstagramInput } from "@/lib/applications";
+import { isHttpUrl, isInstagramUrl, isValidEmail, normalizeArtistType, normalizeInstagramInput } from "@/lib/applications";
 import { artistAvatarBucket, getSupabaseServiceClient } from "@/lib/supabase";
 
 const maxAvatarSize = 2 * 1024 * 1024;
@@ -42,6 +42,8 @@ export async function PATCH(request: Request) {
   const contactEmail = normalizeOptionalString(formData.get("contact_email"));
   const country = normalizeOptionalString(formData.get("country"));
   const city = normalizeOptionalString(formData.get("city"));
+  const artistType = normalizeArtistType(formData.get("artist_type"));
+  const studioAddress = normalizeOptionalString(formData.get("studio_address"));
   const bio = normalizeOptionalString(formData.get("bio"));
   const instagramUrl = normalizeInstagramInput(formData.get("instagram_url"));
   const websiteUrl = normalizeOptionalString(formData.get("website_url"));
@@ -99,6 +101,8 @@ export async function PATCH(request: Request) {
     contact_email: contactEmail,
     country,
     city,
+    artist_type: artistType,
+    studio_address: artistType === "offline_studio" ? studioAddress : null,
     bio,
     instagram_url: instagramUrl,
     website_url: websiteUrl,
@@ -135,6 +139,8 @@ const profileSelect = `
   bio,
   country,
   city,
+  artist_type,
+  studio_address,
   instagram_url,
   website_url,
   contact_link_label,

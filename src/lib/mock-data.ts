@@ -15,6 +15,8 @@ export type Artist = {
   brandName: string;
   city: string;
   country: string;
+  artistType?: "individual" | "offline_studio";
+  studioAddress?: string;
   bio: string;
   categories: string[];
   acceptsCustom: boolean;
@@ -56,6 +58,8 @@ export const artists: Artist[] = [
     brandName: "Luna Cast Studio",
     city: "Los Angeles",
     country: "United States",
+    artistType: "offline_studio",
+    studioAddress: "Los Angeles, CA, United States",
     bio: "Soft floral resin charms, name pieces, and small keepsakes made in gentle translucent palettes.",
     categories: ["Keychains", "Custom Gifts", "Keepsakes"],
     acceptsCustom: true,
@@ -71,6 +75,7 @@ export const artists: Artist[] = [
     brandName: "Tide Garden Resin",
     city: "Vancouver",
     country: "Canada",
+    artistType: "individual",
     bio: "Ocean trays and botanical home pieces with layered waves, shells, and pressed garden details.",
     categories: ["Home Decos", "Art Objects"],
     acceptsCustom: false,

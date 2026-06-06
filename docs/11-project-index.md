@@ -24,6 +24,12 @@ Main slogan:
 Discover resin artists. Create pieces together.
 ```
 
+Production domain:
+
+```text
+https://resinatewithyou.com
+```
+
 ## Current Status
 
 The project now contains the first-round Next.js MVP plus live Supabase wiring:
@@ -38,6 +44,8 @@ The project now contains the first-round Next.js MVP plus live Supabase wiring:
 - Stable country dropdown and province/state text input
 - Artist application duplicate-email detection
 - Artist login entry and dashboard shell
+- Artist password setup and forgot-password reset by email
+- Admin product management and product hiding/restoring
 - Server-routed artist application form
 - Artist application review MVP
 - Admin application review page
@@ -65,8 +73,9 @@ After each meaningful completed change, update this project index or the related
 | Favorite Finds admin | Clarified | `/admin/featured-products` controls which approved products appear on the homepage and their order. Admins choose products from thumbnail cards, and public homepage cards use the product's own first image so Featured Finds, product directory, and product detail start from the same photo. |
 | Supabase database setup | MVP flow tested | Tables, buckets, env values, submission, image upload, duplicate-email index, duplicate-email blocking, 15-product limit, live approval, public artist display, approved status lookup, product image bucket, and artist avatar bucket are documented. |
 | Email notifications | Code done, not live-critical | Admin and applicant email helpers are wired for Resend. Needs `RESEND_API_KEY`, `EMAIL_FROM`, and `ADMIN_NOTIFICATION_EMAIL` before live email sending. |
-| Artist login/dashboard | Professional workspace sections added | Header links to `/artist/login`; Supabase email/password sign-in routes artists to `/artist/dashboard`, now split into Profile, Products, and Account sections. Artists can edit avatar, brand/contact names, independent public contact email, country/province, Instagram username, website, optional contact/shop platform and account/link, categories, products, and account session actions. |
+| Artist login/dashboard | Password email flow added | Header links to `/artist/login`; approved artists receive a secure setup-password email after approval, can request forgot-password emails from the login page, and can set/reset passwords at `/artist/set-password`. Supabase email/password sign-in routes artists to `/artist/dashboard`, now split into Profile, Products, and Account sections. Artists can edit avatar, brand/contact names, independent public contact email, country/province, Instagram username, website, optional contact/shop platform and account/link, categories, products, and account session actions. |
 | Product publishing | Manageable by artist | Approved artists can publish products directly from `/artist/products/new`. Product upload is limited to 1-5 images, 2 MB each. Product detail pages now support multiple images with a smaller gallery layout. Dashboard now shows a compact product list with Edit, Hide/Show, and Delete actions; edit mode supports product text fields and image add/delete. |
+| Admin product moderation | Code done | `/admin/products` lists artist products, shows image/artist/status/links, supports status filters, saves admin notes, hides/restores products, and turns off homepage featured placement when a product is hidden. |
 
 Latest validation:
 
@@ -109,6 +118,8 @@ Mobile application reliability now includes local text-draft recovery, visible u
 Mobile application first-load behavior now uses `Loading form...` with a short explanation and a delayed refresh warning if the client form logic does not finish loading.
 Native application submissions now return relative `303` redirects, so phones that open the development site through a LAN address stay on that address instead of being redirected to the server-only `0.0.0.0` host.
 Artist login now posts to the local same-origin `/api/artist/login` endpoint before storing the Supabase session, avoiding unreliable direct phone-to-Supabase login requests on the LAN development site. Mobile login also reports invalid email, connection failure, and timeout states explicitly.
+Artist approval now creates or reuses a Supabase Auth user, links it to the artist/profile records, and sends a password setup email. Approved artists can request a password reset email from `/artist/login` and choose the new password on `/artist/set-password`.
+Admin navigation now links Applications, Products, and Featured Finds. `/admin/products` provides the simple moderation safety valve for hiding/restoring products and storing moderation notes.
 
 Working rule: after each stable small block is completed, run the relevant checks and create a local git checkpoint before starting the next block. This keeps mobile fixes reversible and easier to compare.
 ```
@@ -170,13 +181,13 @@ The reminder cannot live inside the project folder as a chat heartbeat, but this
 
 Recommended order from here:
 
-1. Run the latest storage SQL so `product-images` exists in Supabase.
-2. Use a signed-in approved artist to test `/artist/products/new`.
-3. Confirm the product publishing form saves products as `approved` in Supabase.
-4. Confirm the product appears in `/products`, the artist detail page, and the product detail page.
-5. Improve public product/artist display quality with real test content.
-6. Add simple admin product hiding if needed for moderation.
-7. Configure Resend later if live email notifications are needed before launch.
+1. Confirm Supabase Auth redirect URLs allow `https://resinatewithyou.com/artist/set-password`, `https://www.resinatewithyou.com/artist/set-password`, and `http://localhost:3000/artist/set-password`.
+2. Configure Resend (`RESEND_API_KEY`, `EMAIL_FROM=support@resinatewithyou.com`) and send one real approval/password setup email.
+3. Use a signed-in approved artist to test `/artist/products/new`.
+4. Confirm the product publishing form saves products as `approved` in Supabase.
+5. Confirm the product appears in `/products`, the artist detail page, and the product detail page.
+6. Test `/admin/products` hide/restore behavior with one real product.
+7. Improve public product/artist display quality with real test content.
 8. Prepare a small pre-launch checklist for mobile, copy, images, and empty states.
 
 ## Local Development

@@ -274,7 +274,6 @@ export function ArtistProductsOverview() {
                     <p className="text-sm font-semibold text-[#2d3842]">Style tags</p>
                     <ProductStyleTagPicker defaultValue={product.tagsText} />
                   </div>
-                  <Field label="Image alt text for new uploads" name="alt_text" defaultValue={product.imageAlt} />
                 </div>
 
                 <label className="block">

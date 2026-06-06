@@ -41,6 +41,11 @@ export function ArtistCard({ artist }: { artist: Artist }) {
               Custom
             </span>
           ) : null}
+          {artist.artistType === "offline_studio" ? (
+            <span className="pastel-chip px-3 py-1 text-xs font-semibold" style={{ "--chip-bg": "#dff9d9" } as CSSProperties}>
+              Offline studio
+            </span>
+          ) : null}
         </div>
       </Link>
     </article>

@@ -1,6 +1,7 @@
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 
 export type ApplicationStatus = "submitted" | "reviewing" | "needs_info" | "approved" | "rejected";
+export type ArtistType = "individual" | "offline_studio";
 
 export type ApplicationInsert = {
   brand_name: string;
@@ -8,6 +9,8 @@ export type ApplicationInsert = {
   email: string;
   country: string | null;
   city: string | null;
+  artist_type: ArtistType;
+  studio_address: string | null;
   instagram_url: string | null;
   website_url: string | null;
   contact_link_label: string | null;

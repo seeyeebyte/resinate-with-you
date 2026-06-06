@@ -26,6 +26,8 @@ Contact Name (required)
 Email (required)
 Country or region
 Province / state
+Artist Type: Individual / Offline studio
+Studio Address, optional and only for offline studios
 ```
 
 ### Links

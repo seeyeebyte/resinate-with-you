@@ -58,6 +58,8 @@ create table if not exists public.applications (
   email text not null,
   country text,
   city text,
+  artist_type text not null default 'individual' check (artist_type in ('individual', 'offline_studio')),
+  studio_address text,
   instagram_url text,
   website_url text,
   contact_link_label text,
@@ -86,6 +88,8 @@ create table if not exists public.artists (
   bio text,
   country text,
   city text,
+  artist_type text not null default 'individual' check (artist_type in ('individual', 'offline_studio')),
+  studio_address text,
   avatar_url text,
   banner_url text,
   instagram_url text,
@@ -104,6 +108,28 @@ create table if not exists public.artists (
 alter table public.artists add column if not exists contact_name text;
 alter table public.artists add column if not exists contact_email text;
 alter table public.artists add column if not exists contact_link_label text;
+alter table public.applications add column if not exists artist_type text not null default 'individual';
+alter table public.applications add column if not exists studio_address text;
+alter table public.artists add column if not exists artist_type text not null default 'individual';
+alter table public.artists add column if not exists studio_address text;
+
+do $$
+begin
+  alter table public.applications
+  add constraint applications_artist_type_check
+  check (artist_type in ('individual', 'offline_studio'));
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter table public.artists
+  add constraint artists_artist_type_check
+  check (artist_type in ('individual', 'offline_studio'));
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),

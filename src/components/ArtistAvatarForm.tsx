@@ -27,6 +27,8 @@ type ArtistProfile = {
   bio?: string | null;
   country?: string | null;
   city?: string | null;
+  artist_type?: "individual" | "offline_studio" | null;
+  studio_address?: string | null;
   instagram_url?: string | null;
   website_url?: string | null;
   contact_link_label?: string | null;
@@ -52,6 +54,8 @@ export function ArtistAvatarForm() {
     contactEmail: "",
     country: "",
     city: "",
+    artistType: "individual",
+    studioAddress: "",
     bio: "",
     instagramUrl: "",
     websiteUrl: "",
@@ -149,6 +153,8 @@ export function ArtistAvatarForm() {
     formData.append("contact_email", profile.contactEmail);
     formData.append("country", profile.country);
     formData.append("city", profile.city);
+    formData.append("artist_type", profile.artistType);
+    formData.append("studio_address", profile.artistType === "offline_studio" ? profile.studioAddress : "");
     formData.append("bio", profile.bio);
     formData.append("instagram_url", instagramUrl || "");
     formData.append("website_url", profile.websiteUrl);
@@ -323,6 +329,35 @@ export function ArtistAvatarForm() {
           options={provinceOptions}
           helper="City-level detail is not needed. Leave blank if it does not apply."
         />
+        <Label title="Artist type">
+          <select
+            value={profile.artistType}
+            onChange={(event) =>
+              setProfile((current) => ({
+                ...current,
+                artistType: event.target.value as "individual" | "offline_studio",
+                studioAddress: event.target.value === "offline_studio" ? current.studioAddress : "",
+              }))
+            }
+            className="field-control mt-2 w-full px-3"
+          >
+            <option value="individual">Individual</option>
+            <option value="offline_studio">Offline studio</option>
+          </select>
+        </Label>
+        {profile.artistType === "offline_studio" ? (
+          <Label title="Studio address">
+            <input
+              value={profile.studioAddress}
+              onChange={(event) => setProfile((current) => ({ ...current, studioAddress: event.target.value }))}
+              className="field-control mt-2 w-full px-3"
+              placeholder="Full public studio address, if visitors may see it"
+            />
+            <p className="mt-2 text-xs leading-5 text-[#626960]">
+              Optional. If provided, this address may be shown on your public artist profile.
+            </p>
+          </Label>
+        ) : null}
         <Label title="Instagram username">
           <input
             value={profile.instagramUrl}
@@ -436,6 +471,8 @@ function profileFromArtist(artist: ArtistProfile | null | undefined) {
     contactEmail: artist?.contact_email || "",
     country: artist?.country || "",
     city: artist?.city || "",
+    artistType: artist?.artist_type === "offline_studio" ? "offline_studio" : "individual",
+    studioAddress: artist?.artist_type === "offline_studio" ? artist?.studio_address || "" : "",
     bio: artist?.bio || "",
     instagramUrl: instagramUsernameFromInput(artist?.instagram_url || ""),
     websiteUrl: artist?.website_url || "",

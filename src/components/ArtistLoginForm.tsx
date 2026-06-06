@@ -9,7 +9,7 @@ import { getSupabaseBrowserClient, persistSupabaseBrowserSession } from "@/lib/s
 export function ArtistLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "resetting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const supabase = getSupabaseBrowserClient();
 
@@ -80,6 +80,44 @@ export function ArtistLoginForm() {
     }
   }
 
+  async function handlePasswordReset() {
+    setStatus("resetting");
+    setMessage("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setStatus("error");
+      setMessage("Enter the approved artist email first.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/artist/password-reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string; message?: string; skipped?: boolean };
+
+      if (!response.ok) {
+        setStatus("error");
+        setMessage(payload.error || "Password reset email could not be sent.");
+        return;
+      }
+
+      setStatus(payload.skipped ? "error" : "success");
+      setMessage(payload.message || "If this email belongs to an approved artist account, a password reset link will be sent.");
+    } catch {
+      setStatus("error");
+      setMessage("Could not connect to the password reset service. Check your connection and try again.");
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="soft-card rounded-[10px] p-6 sm:p-8">
       <div>
@@ -112,11 +150,28 @@ export function ArtistLoginForm() {
         />
       </label>
       {message ? (
-        <p className="mt-4 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950">{message}</p>
+        <p
+          className={`mt-4 rounded-[8px] border px-4 py-3 text-sm ${
+            status === "success" ? "border-teal-200 bg-teal-50 text-teal-950" : "border-red-200 bg-red-50 text-red-950"
+          }`}
+        >
+          {message}
+        </p>
       ) : null}
       <button type="submit" disabled={status === "loading"} className="studio-button studio-button-primary mt-6 w-full disabled:opacity-60">
         {status === "loading" ? "Signing in..." : "Sign in"}
       </button>
+      <button
+        type="button"
+        onClick={handlePasswordReset}
+        disabled={status === "resetting"}
+        className="studio-button studio-button-secondary mt-3 w-full disabled:opacity-60"
+      >
+        {status === "resetting" ? "Sending reset email..." : "Forgot password?"}
+      </button>
+      <p className="mt-4 text-sm leading-6 text-[#626960]">
+        Newly approved artists receive a secure email link to set their first password.
+      </p>
     </form>
   );
 }

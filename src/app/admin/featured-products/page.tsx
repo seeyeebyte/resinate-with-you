@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes } from "react";
+import { AdminNav } from "@/components/AdminNav";
 import { hasAdminAccess } from "@/lib/admin-auth";
 import { getFeaturedProductAdminData } from "@/lib/featured-products";
 
@@ -48,6 +49,8 @@ export default async function AdminFeaturedProductsPage({ searchParams }: PagePr
           </div>
           <p>Choose approved products for the homepage. Homepage cards use the product&apos;s first photo.</p>
         </div>
+
+        <AdminNav token={token} active="featured" />
 
         <Notice saved={params.saved} deleted={params.deleted} error={params.error} warning={data.warning} configured={data.configured} />
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { AdminNav } from "@/components/AdminNav";
 import { hasAdminAccess } from "@/lib/admin-auth";
-import { statusLabels } from "@/lib/applications";
+import { artistTypeLabels, normalizeArtistType, statusLabels } from "@/lib/applications";
+import { getApprovedArtistAccountStatus, type ApprovedArtistAccountStatus } from "@/lib/artist-auth";
 import { getSupabaseServiceClient, type ApplicationRecord } from "@/lib/supabase";
 
 export const metadata = {
@@ -13,6 +15,9 @@ type PageProps = {
     reviewed?: string;
     email?: string;
     artist_error?: string;
+    setup_email_error?: string;
+    repair?: string;
+    error?: string;
   }>;
 };
 
@@ -57,6 +62,20 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
     .order("created_at", { ascending: false });
 
   const applications = (data ?? []) as ApplicationRecord[];
+  const { data: approvedData, error: approvedError } = await supabase
+    .from("applications")
+    .select("*")
+    .eq("status", "approved")
+    .order("updated_at", { ascending: false })
+    .limit(20);
+  const approvedApplications = (approvedData ?? []) as ApplicationRecord[];
+  const accountStatuses = await Promise.all(approvedApplications.map((application) => getApprovedArtistAccountStatus(application)));
+  const repairItems = approvedApplications
+    .map((application) => ({
+      application,
+      status: accountStatuses.find((item) => item.applicationId === application.id) || null,
+    }))
+    .filter((item) => item.status?.needsRepair || item.status?.error);
 
   return (
     <section className="section">
@@ -71,11 +90,20 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
           </p>
         </div>
 
-        <ReviewNotice reviewed={params.reviewed} email={params.email} artistError={params.artist_error === "1"} />
+        <AdminNav token={token} active="applications" />
+
+        <ReviewNotice
+          reviewed={params.reviewed}
+          email={params.email}
+          artistError={params.artist_error === "1"}
+          setupEmailError={params.setup_email_error === "1"}
+          repair={params.repair}
+          error={params.error}
+        />
 
         {!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM ? (
           <p className="mb-5 rounded-[8px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            Email is not fully configured. Reviews will still save, but result emails may be skipped.
+            Email sending is not connected yet. Add RESEND_API_KEY and EMAIL_FROM before inviting real artists.
           </p>
         ) : null}
 
@@ -84,6 +112,13 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
             {error.message}
           </p>
         ) : null}
+        {approvedError ? (
+          <p className="mb-5 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950">
+            Could not load approved applications for repair: {approvedError.message}
+          </p>
+        ) : null}
+
+        {repairItems.length ? <AccountRepairSection items={repairItems} token={token} /> : null}
 
         {!error && applications.length === 0 ? (
           <div className="soft-card rounded-[8px] p-6">
@@ -108,12 +143,18 @@ function ReviewNotice({
   reviewed,
   email,
   artistError,
+  setupEmailError,
+  repair,
+  error,
 }: {
   reviewed?: string;
   email?: string;
   artistError: boolean;
+  setupEmailError: boolean;
+  repair?: string;
+  error?: string;
 }) {
-  if (!reviewed && !email && !artistError) {
+  if (!reviewed && !email && !artistError && !setupEmailError && !repair && !error) {
     return null;
   }
 
@@ -125,10 +166,66 @@ function ReviewNotice({
 
   return (
     <div className="mb-5 rounded-[8px] border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950">
-      {reviewed ? <span>Review saved as {reviewed.replace("_", " ")}. </span> : null}
+      {reviewed ? <span>{reviewed === "failed" ? "Review could not be completed. " : `Review saved as ${reviewed.replace("_", " ")}. `}</span> : null}
+      {repair ? <span>{repair === "failed" ? "Repair could not be completed. " : "Repair completed. "}</span> : null}
       {emailMessage ? <span>{emailMessage} </span> : null}
-      {artistError ? <span>The artist record could not be created. Check the database schema.</span> : null}
+      {setupEmailError ? <span>The password setup email could not be prepared. Check Supabase Auth and email settings. </span> : null}
+      {artistError ? <span>The artist login account or artist record could not be completed. Check the database schema.</span> : null}
+      {error ? <span> {error}</span> : null}
     </div>
+  );
+}
+
+function AccountRepairSection({
+  items,
+  token,
+}: {
+  items: {
+    application: ApplicationRecord;
+    status: ApprovedArtistAccountStatus | null;
+  }[];
+  token: string;
+}) {
+  return (
+    <div className="mb-8 rounded-[8px] border border-amber-200 bg-amber-50/80 p-5">
+      <p className="eyebrow">Approved accounts needing repair</p>
+      <h2 className="mt-2 text-2xl font-semibold text-[#2d3842]">Repair account and resend setup email</h2>
+      <p className="mt-2 text-sm leading-6 text-[#626960]">
+        These applications are approved, but the artist account, profile, or setup email may not be complete.
+      </p>
+      <div className="mt-5 grid gap-3">
+        {items.map(({ application, status }) => (
+          <article key={application.id} className="rounded-[8px] border border-[#d9ddd2] bg-white p-4">
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-[#2d3842]">{application.brand_name}</h3>
+                <p className="mt-1 text-sm text-[#626960]">{application.email}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                  <RepairBadge label="Auth user" ok={Boolean(status?.hasAuthUser)} />
+                  <RepairBadge label="Artist" ok={Boolean(status?.hasArtist)} />
+                  <RepairBadge label="Profile" ok={Boolean(status?.hasProfile)} />
+                </div>
+                {status?.error ? <p className="mt-3 text-sm font-semibold text-[#8c2c27]">{status.error}</p> : null}
+              </div>
+              <form action={`/api/admin/applications/${application.id}/repair`} method="post">
+                <input type="hidden" name="token" value={token} />
+                <button type="submit" className="studio-button studio-button-primary w-full sm:w-auto">
+                  Repair & resend setup email
+                </button>
+              </form>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RepairBadge({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <span className={`rounded-full px-3 py-1 ${ok ? "bg-teal-50 text-teal-950" : "bg-red-50 text-red-950"}`}>
+      {label}: {ok ? "OK" : "Missing"}
+    </span>
   );
 }
 
@@ -154,6 +251,8 @@ function ApplicationReviewCard({ application, token }: { application: Applicatio
             <Info label="Contact name" value={application.contact_name || "Not provided"} />
             <Info label="Email" value={application.email} />
             <Info label="Location" value={location} />
+            <Info label="Artist type" value={artistTypeLabels[normalizeArtistType(application.artist_type)]} />
+            <Info label="Studio address" value={application.studio_address || "Not provided"} />
             <Info label="Price range" value={application.price_range || "Not provided"} />
             <Info label="Categories" value={application.categories?.join(", ") || "Not provided"} />
             <Info label="Custom orders" value={application.accepts_custom ? "Yes" : "No"} />

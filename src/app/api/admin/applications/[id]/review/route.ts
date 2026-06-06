@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { createArtistSlug, reviewStatuses } from "@/lib/applications";
+import { reviewStatuses } from "@/lib/applications";
 import { getRequestAdminToken, hasAdminAccess } from "@/lib/admin-auth";
+import { ensureApprovedArtistAccount } from "@/lib/artist-auth";
+import { adminReviewResultPage } from "@/lib/admin-review-result";
 import { sendApplicantReviewEmail } from "@/lib/email";
 import { getSupabaseServiceClient, type ApplicationRecord, type ApplicationStatus } from "@/lib/supabase";
 
@@ -32,6 +34,60 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Choose a valid review status." }, { status: 400 });
   }
 
+  const { data: existingApplication, error: existingError } = await supabase.from("applications").select("*").eq("id", id).single();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+
+  const existing = existingApplication as ApplicationRecord;
+
+  if (status === "approved") {
+    const applicationForApproval = {
+      ...existing,
+      status,
+      admin_notes: adminNotes,
+      updated_at: new Date().toISOString(),
+    } as ApplicationRecord;
+    const authResult = await ensureApprovedArtistAccount(applicationForApproval, {
+      requestUrl: request.url,
+    });
+
+    if (authResult.error) {
+      return redirectToApplications(request, token, {
+        reviewed: "failed",
+        artist_error: "1",
+        error: authResult.error,
+      });
+    }
+
+    const { error: updateError } = await supabase
+      .from("applications")
+      .update({
+        status,
+        admin_notes: adminNotes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (updateError) {
+      return redirectToApplications(request, token, {
+        reviewed: "failed",
+        error: updateError.message,
+      });
+    }
+
+    return adminReviewResultPage({
+      requestUrl: request.url,
+      token,
+      title: authResult.setupEmail.error ? "Approval saved, email failed" : "Approval saved",
+      message: authResult.setupEmail.error
+        ? "The artist account was created and a temporary password was generated, but the email could not be sent."
+        : "The artist account is ready. The email includes the approval message, setup link, and temporary password.",
+      result: authResult,
+    });
+  }
+
   const { data: updatedApplication, error: updateError } = await supabase
     .from("applications")
     .update({
@@ -48,57 +104,26 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const application = updatedApplication as ApplicationRecord;
-  let artistError: string | null = null;
-
-  if (status === "approved") {
-    const { data: existingArtist, error: existingArtistError } = await supabase
-      .from("artists")
-      .select("id")
-      .eq("application_id", application.id)
-      .maybeSingle();
-
-    if (existingArtistError) {
-      artistError = existingArtistError.message;
-    } else if (!existingArtist) {
-      const { error: createArtistError } = await supabase.from("artists").insert({
-        application_id: application.id,
-        brand_name: application.brand_name,
-        contact_name: application.contact_name,
-        slug: createArtistSlug(application),
-        bio: application.bio,
-        country: application.country,
-        city: application.city,
-        instagram_url: application.instagram_url,
-        website_url: application.website_url,
-        contact_link_label: application.contact_link_label,
-        shop_url: application.shop_url,
-        categories: application.categories,
-        sample_image_urls: application.sample_image_urls,
-        accepts_custom: application.accepts_custom,
-        ships_international: application.ships_international,
-        status: "approved",
-      });
-
-      artistError = createArtistError?.message ?? null;
-    }
-  }
-
   const email = await sendApplicantReviewEmail(application, status);
 
+  if (email.skipped) {
+    return redirectToApplications(request, token, { reviewed: status, email: "skipped" });
+  } else if (email.error) {
+    return redirectToApplications(request, token, { reviewed: status, email: "failed" });
+  }
+
+  return redirectToApplications(request, token, { reviewed: status, email: "sent" });
+}
+
+function redirectToApplications(request: Request, token: string, state: Record<string, string>) {
   const redirectUrl = new URL("/admin/applications", request.url);
+
   if (token) {
     redirectUrl.searchParams.set("token", token);
   }
-  redirectUrl.searchParams.set("reviewed", status);
-  if (artistError) {
-    redirectUrl.searchParams.set("artist_error", "1");
-  }
-  if (email.skipped) {
-    redirectUrl.searchParams.set("email", "skipped");
-  } else if (email.error) {
-    redirectUrl.searchParams.set("email", "failed");
-  } else {
-    redirectUrl.searchParams.set("email", "sent");
+
+  for (const [key, value] of Object.entries(state)) {
+    redirectUrl.searchParams.set(key, value);
   }
 
   return NextResponse.redirect(redirectUrl, { status: 303 });

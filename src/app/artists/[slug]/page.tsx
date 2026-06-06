@@ -47,6 +47,12 @@ export default async function ArtistDetailPage({ params }: { params: Promise<{ s
           <p className="mt-3 text-[#6d736d]">
             {artist.city}, {artist.country}
           </p>
+          {artist.artistType === "offline_studio" && artist.studioAddress ? (
+            <div className="mt-4 rounded-[8px] border border-[#d9ddd2] bg-white/70 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#566c71]">Studio address</p>
+              <p className="mt-2 text-sm leading-6 text-[#626960]">{artist.studioAddress}</p>
+            </div>
+          ) : null}
           <p className="mt-6 leading-7 text-[#626960]">{artist.bio}</p>
           <div className="mt-6 flex flex-wrap gap-2">
             {artist.categories.map((category) => (
@@ -57,6 +63,11 @@ export default async function ArtistDetailPage({ params }: { params: Promise<{ s
             {artist.acceptsCustom ? (
               <span className="pastel-chip px-3 py-1 text-xs font-semibold" style={{ "--chip-bg": "#e5d7f7" } as CSSProperties}>
                 Custom orders
+              </span>
+            ) : null}
+            {artist.artistType === "offline_studio" ? (
+              <span className="pastel-chip px-3 py-1 text-xs font-semibold" style={{ "--chip-bg": "#dff9d9" } as CSSProperties}>
+                Offline studio
               </span>
             ) : null}
           </div>

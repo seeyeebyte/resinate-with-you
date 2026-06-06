@@ -14,6 +14,8 @@ type SupabaseArtistRow = {
   bio?: string | null;
   country?: string | null;
   city?: string | null;
+  artist_type?: "individual" | "offline_studio" | null;
+  studio_address?: string | null;
   instagram_url?: string | null;
   website_url?: string | null;
   shop_url?: string | null;
@@ -57,6 +59,8 @@ const artistSelect = `
   bio,
   country,
   city,
+  artist_type,
+  studio_address,
   instagram_url,
   website_url,
   shop_url,
@@ -182,6 +186,8 @@ function mapArtistRow(row: SupabaseArtistRow | null | undefined): Artist | null 
     brandName: row.brand_name || "Untitled artist",
     city: row.city || "Online",
     country: row.country || "Worldwide",
+    artistType: row.artist_type === "offline_studio" ? "offline_studio" : "individual",
+    studioAddress: row.studio_address || undefined,
     bio: row.bio || "Independent resin artist.",
     categories: row.categories?.length ? row.categories : ["Resin Art"],
     acceptsCustom: Boolean(row.accepts_custom),

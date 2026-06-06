@@ -38,6 +38,8 @@ artist-avatars
 - Each artist can have at most 15 products.
 - Each product can have at most 5 images.
 - Applications start as `submitted`.
+- Applications and artists store `artist_type`, using `individual` by default or `offline_studio` for creators with a physical studio.
+- Offline studio addresses are optional and stored in `studio_address`.
 - Products start as `approved` because approved artists can publish directly in the MVP.
 - Public visitors can only read approved artists, approved products, approved product images, active featured products, and can create click records.
 - The website server uses `SUPABASE_SERVICE_ROLE_KEY` for application upload and admin review actions.

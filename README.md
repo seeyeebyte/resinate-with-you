@@ -38,7 +38,7 @@ docs/customization.md
 Open Terminal and enter the project folder first:
 
 ```bash
-cd "/Users/margin/Documents/滴胶作者网站"
+cd "/Users/margin/Documents/resinate-with-you"
 ```
 
 Install dependencies if this is the first time running the project:
@@ -76,6 +76,7 @@ Create `.env.local` from `.env.example`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=
 RESEND_API_KEY=
 ADMIN_NOTIFICATION_EMAIL=
@@ -83,11 +84,20 @@ EMAIL_FROM=
 ADMIN_REVIEW_TOKEN=
 SUPABASE_APPLICATION_PHOTOS_BUCKET=application-photos
 SUPABASE_FEATURED_PRODUCT_IMAGES_BUCKET=featured-product-images
+SUPABASE_PRODUCT_IMAGES_BUCKET=product-images
+SUPABASE_ARTIST_AVATARS_BUCKET=artist-avatars
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` is used only by server routes for application review. `RESEND_API_KEY`, `ADMIN_NOTIFICATION_EMAIL`, and `EMAIL_FROM` enable email notifications. `ADMIN_REVIEW_TOKEN` is optional MVP protection for `/admin/applications`.
+For Vercel production, set:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://resinatewithyou.com
+EMAIL_FROM=support@resinatewithyou.com
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is used only by server routes for application review, artist account setup, password reset emails, and admin management pages. `NEXT_PUBLIC_SITE_URL` is used inside password setup/reset links; production defaults to `https://resinatewithyou.com` if the variable is missing, but setting it in Vercel is still recommended. `RESEND_API_KEY`, `ADMIN_NOTIFICATION_EMAIL`, and `EMAIL_FROM` enable email notifications. `ADMIN_REVIEW_TOKEN` is optional MVP protection for `/admin/applications`, `/admin/products`, and `/admin/featured-products`.
 Create a public Supabase Storage bucket named `application-photos` or set `SUPABASE_APPLICATION_PHOTOS_BUCKET` to the bucket name you prefer. Artist applications require exactly three product photos.
-Create a public Supabase Storage bucket named `featured-product-images` or set `SUPABASE_FEATURED_PRODUCT_IMAGES_BUCKET` to the bucket name you prefer. These images only affect homepage Favorite Finds cards.
+Create public Supabase Storage buckets named `product-images` and `artist-avatars` for artist uploads. `featured-product-images` is kept for older homepage override support, though the current Featured Finds manager uses product images directly.
 
 For step-by-step setup, use:
 
@@ -115,10 +125,15 @@ docs/supabase-mvp-schema.sql
 - `docs/09-day1-setup-status.md`
 - `docs/10-automation-reminder-plan.md`
 - `docs/12-supabase-live-setup-guide.md`
+- `docs/14-production-domain-email-checklist.md`
 - `docs/11-project-index.md`
 
 ## Current Daily Reminder
 
 Automation ID `4` is attached to the current active conversation.
 
-It runs daily at 09:00 Asia/Shanghai and uses the clean project folder as the project context.
+It runs daily at 09:00 Asia/Shanghai and uses this project folder as the project context:
+
+```text
+/Users/margin/Documents/resinate-with-you
+```

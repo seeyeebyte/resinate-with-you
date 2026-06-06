@@ -177,6 +177,7 @@ export function ArtistPuzzleWall({ artists, preview = false }: ArtistPuzzleWallP
                   <span key={category}>{category}</span>
                 ))}
                 {artist.acceptsCustom ? <span>Custom</span> : null}
+                {artist.artistType === "offline_studio" ? <span>Offline studio</span> : null}
               </div>
               <div className="mt-3">
                 <PlatformLinks links={artist.platformLinks} compact />
@@ -268,6 +269,7 @@ export function ArtistPuzzleWall({ artists, preview = false }: ArtistPuzzleWallP
               <span key={category}>{category}</span>
             ))}
             {selectedArtist.acceptsCustom ? <span>Custom</span> : null}
+            {selectedArtist.artistType === "offline_studio" ? <span>Offline studio</span> : null}
           </div>
           <div className="mt-4">
             <PlatformLinks links={selectedArtist.platformLinks} compact />

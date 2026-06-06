@@ -4,7 +4,6 @@ import NextImage from "next/image";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   isAllowedApplicationPhoto,
-  applicationPhotoMaxSize,
   instagramUsernamePattern,
   isHttpUrl,
   isInstagramUrl,
@@ -23,6 +22,9 @@ type SubmitState = "idle" | "submitting" | "success" | "error";
 type EmailCheckState = "idle" | "checking" | "available" | "exists" | "error";
 
 const applicationDraftKey = "resinate-artist-application-draft-v2";
+const applicationOriginalPhotoMaxSize = 20 * 1024 * 1024;
+const applicationPreparedPhotoMaxSize = 950 * 1024;
+const applicationPhotoMaxDimension = 1800;
 const emptyFormFields = {
   brandName: "",
   contactName: "",
@@ -31,6 +33,8 @@ const emptyFormFields = {
   shopUrl: "",
   priceRange: "",
   bio: "",
+  artistType: "individual",
+  studioAddress: "",
   acceptsCustom: false,
   shipsInternational: false,
 };
@@ -70,7 +74,7 @@ export function ApplicationForm({
   const [emailCheckState, setEmailCheckState] = useState<EmailCheckState>("idle");
   const [country, setCountry] = useState("");
   const [provinceOrState, setProvinceOrState] = useState("");
-  const [contactPlatform, setContactPlatform] = useState("wechat");
+  const [contactPlatform, setContactPlatform] = useState("");
   const [otherContactPlatform, setOtherContactPlatform] = useState("");
   const [photoNames, setPhotoNames] = useState(["", "", ""]);
   const [photoErrors, setPhotoErrors] = useState(["", "", ""]);
@@ -124,7 +128,7 @@ export function ApplicationForm({
         setEmail(String(draft.email || ""));
         setCountry(String(draft.country || ""));
         setProvinceOrState(String(draft.provinceOrState || ""));
-        setContactPlatform(String(draft.contactPlatform || "wechat"));
+        setContactPlatform(String(draft.contactPlatform || ""));
         setOtherContactPlatform(String(draft.otherContactPlatform || ""));
         setAuthorizationAccepted(Boolean(draft.authorizationAccepted));
       } catch {
@@ -353,16 +357,27 @@ export function ApplicationForm({
       return;
     }
 
+    if (file.size > applicationOriginalPhotoMaxSize) {
+      setPhotoNames((current) => replaceAt(current, index, ""));
+      setPhotoErrors((current) =>
+        replaceAt(current, index, "This photo is very large. Please choose a photo under 20 MB."),
+      );
+      updatePhotoFile(index, null);
+      setPhotoPreparing((current) => replaceAt(current, index, false));
+      updatePhotoPreview(index, null);
+      return;
+    }
+
     let preparedFile = file;
+    setPhotoPreparing((current) => replaceAt(current, index, true));
 
     if (isHeicPhoto(file)) {
       setPhotoNames((current) => replaceAt(current, index, "Preparing iPhone photo..."));
       setPhotoErrors((current) => replaceAt(current, index, ""));
-      setPhotoPreparing((current) => replaceAt(current, index, true));
       updatePhotoPreview(index, null);
 
       try {
-        preparedFile = await convertPhotoToJpeg(file);
+        preparedFile = await optimizePhotoForUpload(file);
       } catch {
         setPhotoNames((current) => replaceAt(current, index, ""));
         setPhotoErrors((current) =>
@@ -378,7 +393,9 @@ export function ApplicationForm({
         return;
       }
     } else {
-      setPhotoPreparing((current) => replaceAt(current, index, false));
+      setPhotoNames((current) => replaceAt(current, index, "Preparing photo..."));
+      setPhotoErrors((current) => replaceAt(current, index, ""));
+      updatePhotoPreview(index, null);
     }
 
     if (!isAllowedApplicationPhoto(preparedFile)) {
@@ -396,10 +413,23 @@ export function ApplicationForm({
       return;
     }
 
-    if (preparedFile.size > applicationPhotoMaxSize) {
+    try {
+      preparedFile = await optimizePhotoForUpload(preparedFile);
+    } catch {
       setPhotoNames((current) => replaceAt(current, index, ""));
       setPhotoErrors((current) =>
-        replaceAt(current, index, "This photo is larger than 5 MB. Please choose a smaller image."),
+        replaceAt(current, index, "This photo could not be optimized. Please choose another JPG, PNG, or WebP image."),
+      );
+      updatePhotoFile(index, null);
+      setPhotoPreparing((current) => replaceAt(current, index, false));
+      updatePhotoPreview(index, null);
+      return;
+    }
+
+    if (preparedFile.size > applicationPreparedPhotoMaxSize) {
+      setPhotoNames((current) => replaceAt(current, index, ""));
+      setPhotoErrors((current) =>
+        replaceAt(current, index, "This photo is still too large after optimization. Please choose a smaller image."),
       );
       updatePhotoFile(index, null);
       setPhotoPreparing((current) => replaceAt(current, index, false));
@@ -521,12 +551,12 @@ export function ApplicationForm({
         return;
       }
 
-      if (photo.size > applicationPhotoMaxSize) {
+      if (photo.size > applicationPreparedPhotoMaxSize) {
         const oversizedIndex = photosBySlot.findIndex((item) => item === photo);
         setPhotoErrors((current) =>
-          replaceAt(current, oversizedIndex >= 0 ? oversizedIndex : 0, "This photo is larger than 5 MB."),
+          replaceAt(current, oversizedIndex >= 0 ? oversizedIndex : 0, "This photo is still too large after optimization."),
         );
-        showPhotoSubmitError("Each application photo must be 5 MB or smaller.", oversizedIndex >= 0 ? oversizedIndex : 0);
+        showPhotoSubmitError("Please replace the photo that is still too large after optimization.", oversizedIndex >= 0 ? oversizedIndex : 0);
         return;
       }
     }
@@ -541,11 +571,6 @@ export function ApplicationForm({
       contactPlatform === "other"
         ? otherContactPlatform.trim()
         : contactPlatformOptions.find((option) => option.value === contactPlatform)?.label || "";
-
-    if (!selectedContactLabel) {
-      showSubmitError("Choose a contact or shop platform, or add another platform name.");
-      return;
-    }
 
     const hasPresetCategory = selectedCategories.some((category) => category !== "Other");
 
@@ -562,6 +587,8 @@ export function ApplicationForm({
     formData.set("shop_url", formFields.shopUrl.trim());
     formData.set("price_range", formFields.priceRange.trim());
     formData.set("bio", formFields.bio.trim());
+    formData.set("artist_type", formFields.artistType);
+    formData.set("studio_address", formFields.artistType === "offline_studio" ? formFields.studioAddress.trim() : "");
     formData.delete("sample_images");
     photos.forEach((photo) => formData.append("sample_images", photo));
     formData.delete("categories");
@@ -626,7 +653,7 @@ export function ApplicationForm({
     setEmailCheckState("idle");
     setCountry("");
     setProvinceOrState("");
-    setContactPlatform("wechat");
+    setContactPlatform("");
     setOtherContactPlatform("");
     setPhotoNames(["", "", ""]);
     setPhotoErrors(["", "", ""]);
@@ -691,6 +718,18 @@ export function ApplicationForm({
           options={provinceOptions}
           name="city"
           helper="City-level detail is not needed. Leave blank if it does not apply."
+        />
+        <ArtistTypeField
+          artistType={formFields.artistType}
+          studioAddress={formFields.studioAddress}
+          onArtistTypeChange={(value) =>
+            setFormFields((current) => ({
+              ...current,
+              artistType: value,
+              studioAddress: value === "offline_studio" ? current.studioAddress : "",
+            }))
+          }
+          onStudioAddressChange={(value) => setFormFields((current) => ({ ...current, studioAddress: value }))}
         />
         <Field
           label="Instagram username"
@@ -779,7 +818,7 @@ export function ApplicationForm({
       <fieldset>
         <legend className="text-sm font-semibold text-[#2d3842]">Product photos *</legend>
         <p className="mt-2 text-xs leading-5 text-[#626960]">
-          Choose exactly 3 photos that best represent your work. JPG, PNG, or WebP, max 5 MB each.
+          Choose exactly 3 photos that best represent your work. JPG, PNG, or WebP. Large photos are optimized before upload.
         </p>
         <label
           htmlFor="application-photos"
@@ -1002,39 +1041,69 @@ function isHeicPhoto(file: File) {
   );
 }
 
-async function convertPhotoToJpeg(file: File) {
+async function optimizePhotoForUpload(file: File) {
+  if (file.size <= applicationPreparedPhotoMaxSize && !isHeicPhoto(file)) {
+    return file;
+  }
+
   const objectUrl = URL.createObjectURL(file);
 
   try {
     const image = await loadImage(objectUrl);
-    const maxDimension = 2400;
-    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d");
+    const dimensions = [applicationPhotoMaxDimension, 1500, 1200, 1000, 800];
+    const qualities = [0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
+    let smallestFile: File | null = null;
 
-    if (!context) {
-      throw new Error("Canvas is not available.");
+    for (const maxDimension of dimensions) {
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Canvas is not available.");
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+
+      for (const quality of qualities) {
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+
+        if (!blob) {
+          continue;
+        }
+
+        const optimizedFile = new File([blob], optimizedPhotoName(file.name), {
+          type: "image/jpeg",
+          lastModified: file.lastModified,
+        });
+
+        if (!smallestFile || optimizedFile.size < smallestFile.size) {
+          smallestFile = optimizedFile;
+        }
+
+        if (optimizedFile.size <= applicationPreparedPhotoMaxSize) {
+          return optimizedFile;
+        }
+      }
     }
 
-    context.drawImage(image, 0, 0, width, height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
-
-    if (!blob) {
+    if (!smallestFile) {
       throw new Error("Photo conversion failed.");
     }
 
-    const baseName = file.name.replace(/\.(heic|heif)$/i, "") || "iphone-photo";
-    return new File([blob], `${baseName}.jpg`, {
-      type: "image/jpeg",
-      lastModified: file.lastModified,
-    });
+    return smallestFile;
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+function optimizedPhotoName(name: string) {
+  const baseName = name.replace(/\.[^.]+$/i, "").trim() || "product-photo";
+  return `${baseName}.jpg`;
 }
 
 function loadImage(source: string) {
@@ -1080,7 +1149,7 @@ function saveApplicationDraft(draft: ApplicationDraft) {
     draft.email.trim().length > 0 ||
     draft.country.trim().length > 0 ||
     draft.provinceOrState.trim().length > 0 ||
-    draft.contactPlatform !== "wechat" ||
+    draft.contactPlatform.trim().length > 0 ||
     draft.otherContactPlatform.trim().length > 0 ||
     draft.authorizationAccepted;
 
@@ -1135,6 +1204,50 @@ function Field({
       />
       {helper ? <span className="mt-2 block text-xs leading-5 text-[#626960]">{helper}</span> : null}
     </label>
+  );
+}
+
+function ArtistTypeField({
+  artistType,
+  studioAddress,
+  onArtistTypeChange,
+  onStudioAddressChange,
+}: {
+  artistType: string;
+  studioAddress: string;
+  onArtistTypeChange: (value: string) => void;
+  onStudioAddressChange: (value: string) => void;
+}) {
+  return (
+    <>
+      <label className="block">
+        <span className="text-sm font-semibold text-[#2d3842]">Artist type</span>
+        <select
+          name="artist_type"
+          value={artistType}
+          onChange={(event) => onArtistTypeChange(event.target.value)}
+          className="field-control mt-2 w-full px-4 text-sm"
+        >
+          <option value="individual">Individual</option>
+          <option value="offline_studio">Offline studio</option>
+        </select>
+      </label>
+      {artistType === "offline_studio" ? (
+        <label className="block">
+          <span className="text-sm font-semibold text-[#2d3842]">Studio address</span>
+          <input
+            name="studio_address"
+            value={studioAddress}
+            onChange={(event) => onStudioAddressChange(event.target.value)}
+            className="field-control mt-2 w-full px-4 text-sm"
+            placeholder="Full public studio address, if visitors may see it"
+          />
+          <span className="mt-2 block text-xs leading-5 text-[#626960]">
+            Optional. If provided, this address may be shown on your public artist profile.
+          </span>
+        </label>
+      ) : null}
+    </>
   );
 }
 
@@ -1254,6 +1367,7 @@ function ContactPlatformField({
           onChange={(event) => setContactPlatform(event.target.value)}
           className="field-control mt-2 w-full px-4 text-sm"
         >
+          <option value="">No platform selected</option>
           {contactPlatformOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -1268,14 +1382,13 @@ function ContactPlatformField({
             name="other_contact_platform"
             value={otherContactPlatform}
             onChange={(event) => setOtherContactPlatform(event.target.value)}
-            required
             className="field-control mt-2 w-full px-4 text-sm"
             placeholder="Tell us the platform or contact method"
           />
         </label>
       ) : null}
       <span className="mt-2 block text-xs leading-5 text-[#626960]">
-        Choose where customers should contact you or shop from you.
+        Optional. Choose where customers should contact you or shop from you.
       </span>
     </div>
   );

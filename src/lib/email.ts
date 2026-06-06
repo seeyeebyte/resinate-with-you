@@ -1,4 +1,5 @@
 import type { ApplicationRecord, ApplicationStatus } from "@/lib/supabase";
+import { artistTypeLabels, normalizeArtistType } from "@/lib/applications";
 
 type EmailResult = {
   sent: boolean;
@@ -29,6 +30,8 @@ export async function sendAdminApplicationEmail(application: ApplicationRecord):
       `Contact: ${application.contact_name || "Not provided"}`,
       `Email: ${application.email}`,
       `Location: ${[application.city, application.country].filter(Boolean).join(", ") || "Not provided"}`,
+      `Artist type: ${artistTypeLabels[normalizeArtistType(application.artist_type)]}`,
+      `Studio address: ${application.studio_address || "Not provided"}`,
       `Categories: ${application.categories?.join(", ") || "Not provided"}`,
       `Sample photos: ${application.sample_image_urls?.join(", ") || "Not provided"}`,
       `Instagram: ${application.instagram_url || "Not provided"}`,
@@ -89,6 +92,42 @@ export async function sendApplicantReviewEmail(application: ApplicationRecord, s
     to: application.email,
     subject: contentByStatus.subject,
     text: `${contentByStatus.body}${note}`,
+  });
+}
+
+export async function sendArtistPasswordEmail({
+  application,
+  url,
+  mode,
+  temporaryPassword,
+}: {
+  application: ApplicationRecord;
+  url: string;
+  mode: "setup" | "reset";
+  temporaryPassword?: string | null;
+}): Promise<EmailResult> {
+  const name = application.contact_name || application.brand_name;
+  const isSetup = mode === "setup";
+
+  return sendEmail({
+    to: application.email,
+    subject: isSetup ? "Set your Resinate With You artist password" : "Reset your Resinate With You artist password",
+    text: [
+      `Hi ${name},`,
+      "",
+      isSetup
+        ? "Your Resinate With You artist application has been approved. Use the link below to set your own password and open your artist dashboard."
+        : "We received a request to reset the password for your Resinate With You artist account. Use the link below to choose a new password.",
+      "",
+      url,
+      "",
+      temporaryPassword
+        ? `Temporary password: ${temporaryPassword}`
+        : "This link is connected to your approved artist email. If it expires, request a new password email from the artist login page.",
+      temporaryPassword ? "You can also sign in with this temporary password, then change it from the password setup or reset flow." : "",
+      "",
+      "After setting your password, you can sign in to edit your profile and manage products.",
+    ].filter(Boolean).join("\n"),
   });
 }
 

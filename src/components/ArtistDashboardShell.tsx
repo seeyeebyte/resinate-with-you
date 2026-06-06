@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArtistAvatarForm } from "@/components/ArtistAvatarForm";
@@ -100,10 +101,7 @@ export function ArtistDashboardShell() {
               <div className="soft-card rounded-[10px] p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#566c71]">Account</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#2d3842]">{email}</h2>
-                <div className="mt-5 grid gap-3 text-sm leading-6 text-[#626960]">
-                  <p>Password changes are handled through Supabase email login. A reset-password flow can be added next if needed.</p>
-                  <p>Sign out when you are finished using a shared computer.</p>
-                </div>
+                <ArtistPasswordChangeForm email={email} />
                 <button onClick={signOut} className="studio-button studio-button-secondary mt-6">
                   Sign out
                 </button>
@@ -120,6 +118,158 @@ export function ArtistDashboardShell() {
         )}
       </div>
     </section>
+  );
+}
+
+type PasswordStatus = "idle" | "saving" | "success" | "error";
+
+function ArtistPasswordChangeForm({ email }: { email: string }) {
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [status, setStatus] = useState<PasswordStatus>("idle");
+  const [message, setMessage] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabase) {
+      setStatus("error");
+      setMessage("Password changes are not configured yet.");
+      return;
+    }
+
+    if (!currentPassword) {
+      setStatus("error");
+      setMessage("Enter your current password.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setStatus("error");
+      setMessage("Use at least 8 characters for your new password.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setStatus("error");
+      setMessage("The new passwords do not match.");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setStatus("error");
+      setMessage("Choose a new password that is different from your current password.");
+      return;
+    }
+
+    setStatus("saving");
+    setMessage("Saving your new password...");
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      setStatus("error");
+      setMessage("The current password is not correct.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      setStatus("error");
+      setMessage(error.message || "Password could not be changed. Try again or use forgot password.");
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setStatus("success");
+    setMessage("Password changed. Use the new password next time you sign in.");
+  }
+
+  const isSaving = status === "saving";
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-6 max-w-2xl rounded-[10px] border border-[#d9ddd2] bg-white/70 p-5">
+      <div>
+        <h3 className="text-lg font-semibold text-[#2d3842]">Change password</h3>
+        <p className="mt-2 text-sm leading-6 text-[#626960]">
+          Enter your current password before choosing a new one.
+        </p>
+      </div>
+
+      {message ? (
+        <p
+          className={`mt-4 rounded-[8px] border px-4 py-3 text-sm ${
+            status === "success"
+              ? "border-teal-200 bg-teal-50 text-teal-950"
+              : status === "error"
+                ? "border-red-200 bg-red-50 text-red-950"
+                : "border-[#d9ddd2] bg-[#f8faf5] text-[#626960]"
+          }`}
+          aria-live="polite"
+        >
+          {message}
+        </p>
+      ) : null}
+
+      <div className="mt-5 grid gap-4">
+        <label className="block">
+          <span className="text-sm font-semibold text-[#2d3842]">Current password</span>
+          <input
+            type="password"
+            required
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            disabled={isSaving}
+            className="field-control mt-2 w-full px-3 disabled:opacity-60"
+            autoComplete="current-password"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-semibold text-[#2d3842]">New password</span>
+          <input
+            type="password"
+            required
+            minLength={8}
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            disabled={isSaving}
+            className="field-control mt-2 w-full px-3 disabled:opacity-60"
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-semibold text-[#2d3842]">Confirm new password</span>
+          <input
+            type="password"
+            required
+            minLength={8}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            disabled={isSaving}
+            className="field-control mt-2 w-full px-3 disabled:opacity-60"
+            autoComplete="new-password"
+          />
+        </label>
+      </div>
+
+      <button type="submit" disabled={isSaving} className="studio-button studio-button-primary mt-5 w-full disabled:opacity-60 sm:w-auto">
+        {isSaving ? "Saving..." : "Save new password"}
+      </button>
+      <p className="mt-4 text-xs leading-5 text-[#626960]">
+        If you do not know your current password, use forgot password on the login page.
+      </p>
+    </form>
   );
 }
 

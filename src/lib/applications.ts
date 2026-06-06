@@ -1,7 +1,12 @@
 import { categories } from "@/lib/site";
-import type { ApplicationInsert, ApplicationRecord, ApplicationStatus } from "@/lib/supabase";
+import type { ApplicationInsert, ApplicationRecord, ApplicationStatus, ArtistType } from "@/lib/supabase";
 
 export const reviewStatuses: ApplicationStatus[] = ["approved", "needs_info", "rejected"];
+export const artistTypes: ArtistType[] = ["individual", "offline_studio"];
+export const artistTypeLabels: Record<ArtistType, string> = {
+  individual: "Individual",
+  offline_studio: "Offline studio",
+};
 export const requiredSampleImageCount = 3;
 export const maxBioLength = 500;
 export const instagramUsernamePattern = "^@?[A-Za-z0-9._]{1,30}$";
@@ -58,6 +63,8 @@ export type ApplicationPayload = {
   email: string;
   country?: string;
   city?: string;
+  artist_type?: string;
+  studio_address?: string;
   instagram_url?: string;
   website_url?: string;
   contact_link_label?: string;
@@ -85,6 +92,8 @@ export function normalizeApplicationPayload(input: ApplicationPayload): Applicat
     email: normalizeRequiredString(input.email).toLowerCase(),
     country: normalizeOptionalString(input.country),
     city: normalizeOptionalString(input.city),
+    artist_type: normalizeArtistType(input.artist_type),
+    studio_address: normalizeOptionalString(input.studio_address),
     instagram_url: normalizeInstagramInput(input.instagram_url),
     website_url: normalizeOptionalString(input.website_url),
     contact_link_label: normalizeOptionalString(input.contact_link_label),
@@ -149,6 +158,11 @@ export function createArtistSlug(application: Pick<ApplicationRecord, "brand_nam
     .slice(0, 48);
 
   return `${base || "artist"}-${application.id.slice(0, 8)}`;
+}
+
+export function normalizeArtistType(value: unknown): ArtistType {
+  const normalized = String(value || "").trim();
+  return artistTypes.includes(normalized as ArtistType) ? (normalized as ArtistType) : "individual";
 }
 
 function normalizeRequiredString(value: unknown) {
