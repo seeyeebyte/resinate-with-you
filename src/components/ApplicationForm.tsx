@@ -14,6 +14,7 @@ import {
 } from "@/lib/applications";
 import { CountrySelectField } from "@/components/CountrySelectField";
 import { contactPlatformOptions } from "@/components/PlatformLinks";
+import { ProvinceStateField } from "@/components/ProvinceStateField";
 import { countryOptions } from "@/lib/country-options";
 import { regionOptionsByCountryCode } from "@/lib/region-options-by-country";
 import { categories } from "@/lib/site";
@@ -60,6 +61,7 @@ export function ApplicationForm({
   const formRef = useRef<HTMLFormElement | null>(null);
   const photoPreviewUrlsRef = useRef(["", "", ""]);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoSlotInputRefs = useRef<Array<HTMLInputElement | null>>([null, null, null]);
   const photoFilesRef = useRef<Array<File | null>>([null, null, null]);
   const [formFields, setFormFields] = useState(emptyFormFields);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -309,6 +311,36 @@ export function ApplicationForm({
     }
 
     input.value = "";
+  }
+
+  async function handleSinglePhotoSelection(index: number, input: HTMLInputElement) {
+    const file = input.files?.[0] || null;
+
+    if (!file) {
+      return;
+    }
+
+    setPhotoErrors((current) => replaceAt(current, index, ""));
+    await preparePhotoSlot(index, file);
+    input.value = "";
+  }
+
+  function replacePhoto(index: number) {
+    photoSlotInputRefs.current[index]?.click();
+  }
+
+  function removePhoto(index: number) {
+    setPhotoNames((current) => replaceAt(current, index, ""));
+    setPhotoErrors((current) => replaceAt(current, index, ""));
+    updatePhotoFile(index, null);
+    setPhotoPreparing((current) => replaceAt(current, index, false));
+    updatePhotoPreview(index, null);
+
+    const slotInput = photoSlotInputRefs.current[index];
+
+    if (slotInput) {
+      slotInput.value = "";
+    }
   }
 
   async function preparePhotoSlot(index: number, file: File | null) {
@@ -653,24 +685,13 @@ export function ApplicationForm({
           onChange={handleCountryChange}
           helper="Choose from the list. Province or state can be typed below."
         />
-        <ControlledField
-          label="Province / state"
-          name="city"
+        <ProvinceStateField
           value={provinceOrState}
           onChange={setProvinceOrState}
-          placeholder="Province, state, prefecture, or region"
-          listId={provinceOptions.length ? "application-province-options" : undefined}
+          options={provinceOptions}
+          name="city"
           helper="City-level detail is not needed. Leave blank if it does not apply."
         />
-        {provinceOptions.length ? (
-          <datalist id="application-province-options">
-            {provinceOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </datalist>
-        ) : null}
         <Field
           label="Instagram username"
           name="instagram_url"
@@ -807,6 +828,34 @@ export function ApplicationForm({
               <p className={`mt-3 break-all text-xs leading-5 ${photoErrors[index] ? "text-[#a4423b]" : "text-[#626960]"}`}>
                 {photoErrors[index] || (fileName ? `Selected: ${fileName}` : "No photo selected yet.")}
               </p>
+              <input
+                ref={(node) => {
+                  photoSlotInputRefs.current[index] = node;
+                }}
+                type="file"
+                accept="image/*,.jpg,.jpeg,.png,.webp"
+                onChange={(event) => void handleSinglePhotoSelection(index, event.target)}
+                className="sr-only"
+                aria-label={`Replace product photo ${index + 1}`}
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => replacePhoto(index)}
+                  className="rounded-full border border-[#d9ddd2] bg-white px-4 py-2 text-xs font-semibold text-[#2d3842] transition hover:border-[#9ba69d]"
+                >
+                  {fileName ? "Replace" : "Choose"}
+                </button>
+                {fileName ? (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    className="rounded-full border border-[#f0c5bf] bg-[#fff7f5] px-4 py-2 text-xs font-semibold text-[#8c2c27] transition hover:border-[#d7867f]"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
             </div>
           ))}
         </div>
@@ -1082,39 +1131,6 @@ function Field({
         pattern={pattern}
         value={value}
         onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-        className="field-control mt-2 w-full px-4 text-sm"
-      />
-      {helper ? <span className="mt-2 block text-xs leading-5 text-[#626960]">{helper}</span> : null}
-    </label>
-  );
-}
-
-function ControlledField({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  listId,
-  helper,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  listId?: string;
-  helper?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-semibold text-[#2d3842]">{label}</span>
-      <input
-        name={name}
-        list={listId}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
         className="field-control mt-2 w-full px-4 text-sm"
       />
       {helper ? <span className="mt-2 block text-xs leading-5 text-[#626960]">{helper}</span> : null}

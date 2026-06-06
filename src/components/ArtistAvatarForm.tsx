@@ -4,6 +4,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CountrySelectField } from "@/components/CountrySelectField";
 import { contactPlatformOptions } from "@/components/PlatformLinks";
+import { ProvinceStateField } from "@/components/ProvinceStateField";
 import {
   instagramUsernameFromInput,
   instagramUsernamePattern,
@@ -316,25 +317,12 @@ export function ArtistAvatarForm() {
           className="field-control mt-2 w-full px-3"
           helper="Choose from the list. Province or state can be typed below."
         />
-        <Label title="Province / state">
-          <input
-            value={profile.city}
-            onChange={(event) => setProfile((current) => ({ ...current, city: event.target.value }))}
-            list={provinceOptions.length ? "artist-profile-province-options" : undefined}
-            className="field-control mt-2 w-full px-3"
-            placeholder="Province, state, prefecture, or region"
-          />
-          {provinceOptions.length ? (
-            <datalist id="artist-profile-province-options">
-              {provinceOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </datalist>
-          ) : null}
-          <p className="mt-2 text-xs leading-5 text-[#626960]">City-level detail is not needed. Leave blank if it does not apply.</p>
-        </Label>
+        <ProvinceStateField
+          value={profile.city}
+          onChange={(value) => setProfile((current) => ({ ...current, city: value }))}
+          options={provinceOptions}
+          helper="City-level detail is not needed. Leave blank if it does not apply."
+        />
         <Label title="Instagram username">
           <input
             value={profile.instagramUrl}
